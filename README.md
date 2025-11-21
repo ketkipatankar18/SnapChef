@@ -77,8 +77,8 @@ SnapChef is comprised of a Streamlit frontend and a Flask backend:
     ```
     * Run the Flask App Container
     ```bash
-    docker run -d -p 5000:5000 --name snapchef-backend \
-      -v $(pwd)/services/ChromaDB:/app/services/ChromaDB \
+    docker run -d -p 8000:8000 --name snapchef-backend \
+      -v $(pwd)/services/ChromaDB:/services/ChromaDB \
       snapchef-backend
     ```
 
