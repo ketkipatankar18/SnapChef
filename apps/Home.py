@@ -62,7 +62,11 @@ if 'token' not in st.session_state:
     # Sceanrio 2 - token not in both cookie and current session
     else:
         # Show the google login button
-        result = oauth2.authorize_button("Log in using Google","http://localhost:8501", "openid email profile")
+        # result = oauth2.authorize_button("Log in using Google","http://localhost:8501", "openid email profile")
+
+        redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501")
+        result = oauth2.authorize_button("Log in using Google", redirect_uri, "openid email profile")
+
         # If and when login is successful, result["token"] is and OAuth2Token object
         if result and 'token' in result:
             # If authorization successful, save token in session state
