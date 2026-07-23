@@ -1,3 +1,28 @@
-services/ChromaDB
-recipes.csv
+# Secrets
 apps/.streamlit/secrets.toml
+.streamlit/
+
+# ChromaDB binary index — too large for git
+services/ChromaDB/dataset/
+services/ChromaDB/chroma.sqlite3
+services/ChromaDB/recipes.csv
+
+# Terraform sensitive files
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfvars
+
+# Eval results — generated locally
+eval_results/
+evallm_as_judge_results/
+
+# Python cache
+services/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+
+# Mac
+.DS_Store

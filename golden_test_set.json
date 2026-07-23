@@ -1,0 +1,142 @@
+[
+  {
+    "ingredients_list": ["pasta", "tomato", "garlic", "olive oil"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 2,
+    "prompt": "I want something quick and Italian",
+    "reference_answer": "A simple pasta dish with tomato and garlic sauce cooked in olive oil, ready in under 30 minutes for 2 servings, using only the listed ingredients."
+  },
+  {
+    "ingredients_list": ["eggs", "butter", "salt"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 1,
+    "prompt": "",
+    "reference_answer": "Soft scrambled eggs cooked in butter and seasoned with salt, ready in under 5 minutes for 1 serving."
+  },
+  {
+    "ingredients_list": ["chicken", "onion", "tomato", "chili", "ginger", "garlic", "oil"],
+    "cooking_time": "30-60 minutes",
+    "serving_size": 4,
+    "prompt": "I want something spicy",
+    "reference_answer": "A spicy chicken curry with onion, tomato, chili, ginger and garlic cooked in oil, ready in 45 minutes for 4 servings."
+  },
+  {
+    "ingredients_list": ["flour", "sugar", "cocoa powder", "milk", "oil", "baking powder"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 1,
+    "prompt": "something sweet and fast",
+    "reference_answer": "A quick chocolate mug cake made in the microwave using flour, sugar, cocoa powder, milk, oil and baking powder, ready in under 5 minutes."
+  },
+  {
+    "ingredients_list": ["broccoli", "carrot", "soy sauce", "garlic", "sesame oil"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 2,
+    "prompt": "healthy and quick",
+    "reference_answer": "A healthy vegetable stir fry with broccoli and carrot in a soy-garlic sauce with sesame oil, ready in 15 minutes for 2 servings."
+  },
+  {
+    "ingredients_list": ["banana", "eggs", "flour", "milk", "butter"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 2,
+    "prompt": "",
+    "reference_answer": "Fluffy banana pancakes made with eggs, flour and milk, cooked in butter, for 2 servings."
+  },
+  {
+    "ingredients_list": ["shrimp", "pasta", "lemon", "garlic", "butter", "parsley"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 2,
+    "prompt": "",
+    "reference_answer": "A light lemon garlic shrimp pasta with butter and parsley, ready in under 20 minutes for 2 servings."
+  },
+  {
+    "ingredients_list": ["beef", "potato", "carrot", "onion", "beef broth", "tomato paste"],
+    "cooking_time": "> 60 minutes",
+    "serving_size": 4,
+    "prompt": "hearty dinner",
+    "reference_answer": "A rich beef stew with potato, carrot and onion slow cooked in beef broth and tomato paste for over an hour, serves 4."
+  },
+  {
+    "ingredients_list": ["avocado", "bread", "lemon", "salt", "chili flakes"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 1,
+    "prompt": "light lunch",
+    "reference_answer": "Simple avocado toast on toasted bread with lemon juice, salt and chili flakes, ready in 5 minutes for 1 serving."
+  },
+  {
+    "ingredients_list": ["mushroom", "onion", "garlic", "cream", "butter", "vegetable broth"],
+    "cooking_time": "30-60 minutes",
+    "serving_size": 4,
+    "prompt": "",
+    "reference_answer": "A creamy mushroom soup with sauteed mushrooms, onion and garlic in vegetable broth finished with cream, serves 4."
+  },
+  {
+    "ingredients_list": ["cucumber", "tomato", "feta cheese", "olive", "red onion", "olive oil", "oregano"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 2,
+    "prompt": "fresh and simple",
+    "reference_answer": "A fresh salad with cucumber, tomato, feta, olives and red onion dressed in olive oil and oregano, for 2 servings."
+  },
+  {
+    "ingredients_list": ["red lentils", "onion", "tomato", "cumin", "turmeric", "garlic", "ghee"],
+    "cooking_time": "30-60 minutes",
+    "serving_size": 4,
+    "prompt": "Indian style",
+    "reference_answer": "A comforting dal made with red lentils tempered with cumin and garlic in ghee, with onion and tomato, serves 4."
+  },
+  {
+    "ingredients_list": ["rice", "egg", "carrot", "peas", "soy sauce", "sesame oil", "garlic"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 2,
+    "prompt": "",
+    "reference_answer": "Quick vegetable fried rice with egg, carrot and peas seasoned with soy sauce and sesame oil, for 2 servings."
+  },
+  {
+    "ingredients_list": ["bread", "tomato", "basil", "garlic", "olive oil", "salt"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 4,
+    "prompt": "appetizer",
+    "reference_answer": "Classic bruschetta with diced tomato and fresh basil on toasted bread rubbed with garlic and olive oil, serves 4."
+  },
+  {
+    "ingredients_list": ["eggs", "cheddar cheese", "butter", "salt", "pepper"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 1,
+    "prompt": "",
+    "reference_answer": "A simple folded omelette filled with melted cheddar cheese, cooked in butter and seasoned with salt and pepper."
+  },
+  {
+    "ingredients_list": ["chicken thighs", "rosemary", "thyme", "garlic", "olive oil", "lemon"],
+    "cooking_time": "> 60 minutes",
+    "serving_size": 4,
+    "prompt": "",
+    "reference_answer": "Herb-roasted chicken thighs with rosemary, thyme, garlic and lemon in olive oil, roasted until golden for 4 servings."
+  },
+  {
+    "ingredients_list": ["mango", "yogurt", "milk", "sugar", "cardamom"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 2,
+    "prompt": "refreshing drink",
+    "reference_answer": "A smooth mango lassi blended with yogurt, milk, sugar and a pinch of cardamom for 2 servings."
+  },
+  {
+    "ingredients_list": ["black beans", "tortilla", "avocado", "lime", "cumin", "chili powder", "onion"],
+    "cooking_time": "< 30 minutes",
+    "serving_size": 2,
+    "prompt": "vegetarian dinner",
+    "reference_answer": "Quick vegetarian black bean tacos with avocado, cumin-spiced beans, lime and onion in tortillas, for 2 servings."
+  },
+  {
+    "ingredients_list": ["salmon", "lemon", "dill", "olive oil", "garlic", "salt"],
+    "cooking_time": "30-60 minutes",
+    "serving_size": 2,
+    "prompt": "",
+    "reference_answer": "Oven-baked salmon fillets with lemon, dill and garlic in olive oil, cooked in 20 minutes for 2 servings."
+  },
+  {
+    "ingredients_list": ["potato", "onion", "garlic", "vegetable broth", "cream", "butter"],
+    "cooking_time": "30-60 minutes",
+    "serving_size": 4,
+    "prompt": "warming winter meal",
+    "reference_answer": "A warming creamy potato soup with onion and garlic in vegetable broth finished with cream and butter, serves 4."
+  }
+]
