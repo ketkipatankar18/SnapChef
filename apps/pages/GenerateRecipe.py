@@ -131,16 +131,19 @@ Reply in this exact format (JSON only, no other text):
         return {"intent": "recipe_tweak", "safe": True, "reason": "could not classify"}
 
 def detect_missing_ingredients(recipe_summary: str, user_ingredients: list) -> list:
-    """
-    This function determines the gap between the recipe summary and user ingredients list"""
     detection_prompt = f"""Here are some recipe descriptions:
 {recipe_summary}
 
 The user only has these ingredients: {', '.join(user_ingredients)}
 
 List the ingredients mentioned in the recipes that the user does NOT have.
-Reply with a simple comma-separated list only. If none are missing, reply with "none".
-Do not include pantry assumptions, only list things explicitly in the recipes above."""
+Rules:
+- Return ingredient names only — no quantities, no units, no numbers
+- No verbs, no preparation instructions (e.g. "minced", "chopped", "boiled")
+- Just the plain ingredient name e.g. "garlic" not "2 cloves garlic, minced"
+- Reply with a simple comma-separated list only
+- If none are missing, reply with "none"
+- Do not include pantry assumptions, only list things explicitly in the recipes above"""
 
     # return a comma seperated string as output
     result = llm_sync.invoke(detection_prompt)
@@ -236,10 +239,15 @@ if "recipe_summary" not in st.session_state:
 if st.session_state.get("missing_ingredients") and "recipe_generated" not in st.session_state:
     missing = st.session_state["missing_ingredients"]
 
+    # st.info(
+    #     f"🔍 The best matching recipes also use: **{', '.join(missing)}**\n\n"
+    #     f"Select any you actually have to get a better recipe, then click **Regenerate**. "
+    #     f"Or skip to generate with just your original ingredients."
+    # )
+
     st.info(
-        f"🔍 The best matching recipes also use: **{', '.join(missing)}**\n\n"
-        f"Select any you actually have to get a better recipe, then click **Regenerate**. "
-        f"Or skip to generate with just your original ingredients."
+        "🔍 The best matching recipes use some ingredients you may have. "
+        "Check the dropdown below and select any you actually have to get a better recipe."
     )
 
     selected = st.multiselect(
