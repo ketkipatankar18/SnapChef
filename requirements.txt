@@ -1,6 +1,6 @@
 # Backend 
 flask
-pandas==2.1.1
+pandas
 sentence-transformers==2.7.0
 pinecone
 
@@ -24,12 +24,12 @@ langchain-anthropic==0.1.23
 # OpenAI
 openai==1.57.0
 
-# Evaluation (RAGAS) 
+# Evaluation
 ragas==0.2.15
 datasets==2.21.0
 rapidfuzz
 
-# FastAPI (for local backend development)
+# FastAPI
 fastapi
 uvicorn[standard]
 pydantic>=2.0
