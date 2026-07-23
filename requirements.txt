@@ -1,0 +1,36 @@
+# Backend 
+flask
+pandas==2.1.1
+sentence-transformers==2.7.0
+pinecone
+
+# BM25
+rank-bm25
+
+# Frontend 
+streamlit
+streamlit-oauth
+streamlit-cookies-manager
+requests==2.34.2
+
+# LangChain stack 
+langchain==0.2.17
+langchain-core==0.2.43
+langchain-community==0.2.19
+langchain-openai==0.1.25
+langchain-text-splitters==0.2.4
+langchain-anthropic==0.1.23
+
+# OpenAI
+openai==1.57.0
+
+# Evaluation (RAGAS) 
+ragas==0.2.15
+datasets==2.21.0
+rapidfuzz
+
+# FastAPI (for local backend development)
+fastapi
+uvicorn[standard]
+pydantic>=2.0
+numpy==1.26.4
