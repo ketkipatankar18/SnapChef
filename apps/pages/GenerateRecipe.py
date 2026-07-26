@@ -150,8 +150,54 @@ Rules:
     raw = result.content.strip()
     if raw.lower() == "none" or not raw:
         return []
-    return [i.strip() for i in raw.split(",") if i.strip()]
+    seen = set()
+    result = []
+    for i in raw.split(","):
+        cleaned = i.strip().lower()
+        if cleaned and cleaned not in seen:
+            seen.add(cleaned)
+            result.append(i.strip())
+    return result
+    # return [i.strip() for i in raw.split(",") if i.strip()]
 
+def log_feedback(rating: int):
+    """
+    Logs user feedback to a CSV file for offline analysis.
+    rating=1 means positive (thumbs up), rating=0 means negative (thumbs down).
+    
+    This is the human-in-the-loop (HITL) feedback loop:
+    - Complements RAGAS offline eval (retrieval quality)
+    - Complements LLM-as-judge (generation quality)
+    - Provides real user signals for future A/B testing
+    """
+    import csv
+    import os
+    from datetime import datetime
+
+    feedback_dir = "eval_results"
+    os.makedirs(feedback_dir, exist_ok=True)
+    feedback_path = os.path.join(feedback_dir, "user_feedback.csv")
+
+    file_exists = os.path.exists(feedback_path)
+
+    with open(feedback_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow([
+                "timestamp", "rating", "ingredients",
+                "cooking_time", "serving_size", "prompt",
+                "recipe_snippet"
+            ])
+        writer.writerow([
+            datetime.now().isoformat(),
+            rating,
+            ", ".join(st.session_state.get("ingredients_list", [])),
+            st.session_state.get("cooking_time", ""),
+            st.session_state.get("serving_size", ""),
+            st.session_state.get("prompt", ""),
+            st.session_state.get("recipe_generated", "")[:200],
+        ])
+        
 def build_llm_prompt():
     """
     Build the actual recipe generation prompt"""
@@ -160,17 +206,32 @@ def build_llm_prompt():
 Retrieved recipes for inspiration:
 {st.session_state.get("recipe_summary", "")}
 
-STRICT RULES:
+SSTRICT RULES:
 1. ONLY use these ingredients: {', '.join(st.session_state["ingredients_list"])}
 2. Do NOT add any other ingredients, not even pantry staples like salt or oil
-3. If a step needs something unavailable, skip it or substitute from the user's list
-4. If ingredients are too limited, make the simplest possible dish and explain honestly
+3. If a cooking step requires an ingredient not in the user's list, either:
+   - Skip that step entirely if the dish still makes sense without it
+   - Substitute with the closest available ingredient from the user's list
+   - If neither is possible, acknowledge the limitation honestly and simplify the dish
+4. If the available ingredients are too limited to make any real dish (e.g. only salt 
+   and water, or only one or two basic condiments with nothing to cook), do NOT invent 
+   a fake recipe. Instead, respond with warmth and light humour — something like 
+   "SnapChef works magic with limited ingredients, but even we need something to work 
+   with! With just [ingredients], the best dish we can offer is... a glass of water. 
+   Head back and add a few more ingredients — even something simple like an egg, some 
+   bread, or a vegetable goes a long way."
+   Keep the tone friendly and encouraging, not dismissive.
+5. Try to incorporate as many of the user's ingredients as possible into the recipe,
+   but only if they make culinary sense together. Do not force ingredients that would
+   ruin the dish. If an ingredient clearly does not belong (e.g. banana in a savory
+   pasta), leave it out silently, do not mention it or apologize for not using it.
+6. You may always assume water is available for boiling, cooking, or washing, even if not listed
 
 Create a recipe for {serving_size} servings within {cooking_time}.
 
 Format in clean markdown:
 
-# 🍽️ [Dish Name]
+# 🍽️ [Creative, specific dish name based on the main ingredients]
 
 **⏱️ Cook time:** X minutes
 
@@ -294,6 +355,50 @@ else:
     with st.chat_message("assistant"):
         st.markdown(st.session_state.recipe_generated)
 
+# Check for appliances used in the recipe
+if "appliances_checked" not in st.session_state:
+    appliance_check_prompt = f"""
+Read this recipe and list any kitchen appliances it assumes the user has 
+(e.g. oven, blender, microwave, whisk, mixer, food processor, stove, pan, pot).
+Reply with a comma-separated list only. If none, reply "none".
+Recipe: {st.session_state.recipe_generated}
+"""
+    appliance_result = llm_sync.invoke(appliance_check_prompt)
+    raw = appliance_result.content.strip().lower()
+    if raw != "none" and raw:
+        st.session_state["appliances_used"] = [a.strip() for a in raw.split(",") if a.strip()]
+    else:
+        st.session_state["appliances_used"] = []
+    st.session_state["appliances_checked"] = True
+
+if st.session_state.get("appliances_used"):
+    appliances = ", ".join(st.session_state["appliances_used"])
+    st.caption(f"💡 This recipe uses: {appliances}. Don't have one? Ask in the chat below to adapt the recipe.")
+
+st.divider()
+
+# ── Human-in-the-loop feedback ────────────────────────────────────────────────
+# Collects real user signals — used as online quality metrics
+# Complements RAGAS (retrieval quality) and LLM-as-judge (generation quality)
+if "feedback_given" not in st.session_state:
+    st.markdown("#### Was this recipe helpful?")
+    col1, col2, col3 = st.columns([1, 1, 4])
+    with col1:
+        if st.button("👍 Great recipe", use_container_width=True):
+            log_feedback(rating=1)
+            st.session_state["feedback_given"] = "positive"
+            st.rerun()
+    with col2:
+        if st.button("👎 Not quite", use_container_width=True):
+            log_feedback(rating=0)
+            st.session_state["feedback_given"] = "negative"
+            st.rerun()
+else:
+    if st.session_state["feedback_given"] == "positive":
+        st.success("Thanks for the feedback! Glad you liked it 🎉")
+    else:
+        st.info("Thanks for the feedback! Try refining it in the chat below.")
+
 st.divider()
 
 # Follow-up Q&A
@@ -333,14 +438,18 @@ if user_followup:
                 st.session_state["ingredients_list"].append(new_ing)
             followup_prompt = (
                 f"The user now also has: {new_ing}. "
+                f"Acknowledge this addition warmly in one sentence, then update the recipe. "
                 f"Full ingredient list: {', '.join(st.session_state['ingredients_list'])}. "
-                f"Update the recipe to incorporate {new_ing} if it makes sense. "
                 f"Only use ingredients from their list."
             )
         else:
             followup_prompt = (
-                f"User request: {user_followup}\n"
-                f"Remember: only use ingredients from this list: {', '.join(st.session_state['ingredients_list'])}"
+                f"User message: {user_followup}\n"
+                f"Before responding, acknowledge the user's message warmly and naturally in one sentence — "
+                f"whether it is a request, a question, a doubt, or a comment. "
+                f"Then provide your response or updated recipe.\n"
+                f"Remember: only use ingredients from this list: {', '.join(st.session_state['ingredients_list'])}. "
+                f"If the user has explicitly mentioned a new ingredient in their message, you may include it."
             )
 
         with st.chat_message("assistant"):

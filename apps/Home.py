@@ -22,16 +22,19 @@ if not cookies.ready():
 
 st.title("🍳 SnapChef: Recipe Suggestion RAG")
 
-with st.expander("ℹ️ How SnapChef works"):
+with st.expander("ℹ️ What is SnapChef and how do I use it?"):
     st.markdown(
-        "SnapChef uses a RAG (Retrieval-Augmented Generation) pipeline:\n\n"
-        "1. Your ingredients are searched against 50,000+ Food.com recipes "
-        "using hybrid search (BM25 + semantic similarity)\n"
-        "2. The top 10 most relevant recipes are retrieved and reranked "
-        "using a cross-encoder\n"
-        "3. GPT-4o generates a custom recipe using only your ingredients as context\n"
-        "4. You can refine it with follow-up questions\n\n"
-        "Built with: FastAPI · ChromaDB · BM25 · LangChain · GPT-4o · Streamlit"
+        "Ever opened your fridge and had no idea what to cook with what's inside? "
+        "SnapChef solves exactly that.\n\n"
+        "Tell us what ingredients you have at home and we will generate a custom recipe "
+        "just for you — no grocery runs needed.\n\n"
+        "How to use it:\n"
+        "1. Type in the ingredients you currently have at home\n"
+        "2. Choose how much time you have to cook\n"
+        "3. Optionally describe what kind of dish you are in the mood for\n"
+        "4. Click Generate Recipe\n\n"
+        "SnapChef is perfect for reducing food waste, cooking on a budget, "
+        "or simply figuring out dinner with whatever is in your kitchen."
     )
 
 # Load OAuth credentials from secrets 
