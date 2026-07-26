@@ -440,7 +440,22 @@ st.divider()
 # Collects real user signals — used as online quality metrics
 # Complements RAGAS (retrieval quality) and LLM-as-judge (generation quality)
 if "feedback_given" not in st.session_state:
-    st.markdown("#### Was this recipe helpful?")
+    st.markdown("""
+        <div style="
+            background: #FFF8F3;
+            border: 1px solid #FFD4B8;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin: 0.5rem 0;
+        ">
+            <span style="font-size: 1.1rem; font-weight: 600; color: #333; white-space: nowrap;">
+                Was this recipe helpful?
+            </span>
+        </div>
+    """, unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1, 4])
     with col1:
         if st.button("👍 Great recipe", use_container_width=True):
@@ -499,7 +514,8 @@ if user_followup:
                 f"The user now also has: {new_ing}. "
                 f"Acknowledge this addition warmly in one sentence, then update the recipe. "
                 f"Full ingredient list: {', '.join(st.session_state['ingredients_list'])}. "
-                f"Only use ingredients from their list."
+                f"Only use ingredients from their list. "
+                f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped."
             )
         else:
             followup_prompt = (
@@ -508,7 +524,8 @@ if user_followup:
                 f"whether it is a request, a question, a doubt, or a comment. "
                 f"Then provide your response or updated recipe.\n"
                 f"Remember: only use ingredients from this list: {', '.join(st.session_state['ingredients_list'])}. "
-                f"If the user has explicitly mentioned a new ingredient in their message, you may include it."
+                f"If the user has explicitly mentioned a new ingredient in their message, you may include it. "
+                f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped."
             )
 
         with st.chat_message("assistant"):
