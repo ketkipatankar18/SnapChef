@@ -11,6 +11,13 @@ from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from streamlit_cookies_manager import EncryptedCookieManager
 
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 1rem !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 # st.title("👩‍🍳 SnapChef: Generating Your Recipe")
 
 def get_image_base64(image_path):
@@ -21,12 +28,19 @@ def get_image_base64(image_path):
 cookies = EncryptedCookieManager(prefix="snapchef_", password=st.secrets["PASSWORD"])
 if cookies.ready():
     with st.sidebar:
-        st.markdown("<br>" * 10, unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style="position: fixed; bottom: 2rem; width: 14rem;">
+            """,
+            unsafe_allow_html=True
+        )
         if st.button("Log out", type="secondary", use_container_width=True):
             del st.session_state["token"]
             cookies["token"] = ""
             cookies.save()
             st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
 
 img_base64 = get_image_base64("Assets/banner_image.webp")
 
@@ -287,18 +301,18 @@ Create a recipe for {serving_size} servings within {cooking_time}.
 
 Format in clean markdown:
 
-# 🍽️ [Creative, specific dish name based on the main ingredients]
+### 🍽️ [Creative, specific dish name based on the main ingredients]
 
 **⏱️ Cook time:** X minutes
 
 ---
 
-## 🛒 Ingredients (serves {serving_size})
+#### 🛒 Ingredients (serves {serving_size})
 - only list ingredients from the user's available list
 
 ---
 
-## 👨‍🍳 Instructions
+#### 📖 Instructions
 1. Step one
 2. Step two
 
@@ -516,6 +530,7 @@ if user_followup:
                 f"Full ingredient list: {', '.join(st.session_state['ingredients_list'])}. "
                 f"Only use ingredients from their list. "
                 f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped."
+                f"Do not include a Tip section at the end."
             )
         else:
             followup_prompt = (
@@ -526,6 +541,7 @@ if user_followup:
                 f"Remember: only use ingredients from this list: {', '.join(st.session_state['ingredients_list'])}. "
                 f"If the user has explicitly mentioned a new ingredient in their message, you may include it. "
                 f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped."
+                f"Do not include a Tip section at the end."
             )
 
         with st.chat_message("assistant"):

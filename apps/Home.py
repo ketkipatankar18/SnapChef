@@ -15,6 +15,14 @@ cookies = EncryptedCookieManager(
     prefix="snapchef_",
     password= st.secrets["PASSWORD"]
 )
+
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 1rem !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 # If the cookie manager is not ready yet/ it is asynchronous, then we will halt the whole page
 # Streamlit will retry on the next rerun. This part runs before any UI renders.
 if not cookies.ready(): 
@@ -68,7 +76,7 @@ with st.expander("ℹ️ What is SnapChef and how do I use it?"):
         "Ever opened your fridge and had no idea what to cook with what's inside? "
         "SnapChef solves exactly that.\n\n"
         "Tell us what ingredients you have at home and we will generate a custom recipe "
-        "just for you — no grocery runs needed.\n\n"
+        "just for you, no grocery runs needed.\n\n"
         "How to use it:\n"
         "1. Type in the ingredients you currently have at home\n"
         "2. Choose how much time you have to cook\n"
@@ -231,10 +239,15 @@ if st.session_state["ingredients_list"] and st.button("🍳 Generate Recipe", us
 
 # Logout in sidebar
 with st.sidebar:
-    # Push logout to bottom using empty space
-    st.markdown("<br>" * 10, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="position: fixed; bottom: 2rem; width: 14rem;">
+        """,
+        unsafe_allow_html=True
+    )
     if st.button("Log out", type="secondary", use_container_width=True):
         del st.session_state["token"]
         cookies["token"] = ""
         cookies.save()
         st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
