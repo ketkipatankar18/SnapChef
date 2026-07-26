@@ -2,14 +2,67 @@
 
 # Import libraries
 import json
+import base64
 import streamlit as st
 import requests
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from streamlit_cookies_manager import EncryptedCookieManager
 
-st.title("👩‍🍳 SnapChef: Generating Your Recipe")
+# st.title("👩‍🍳 SnapChef: Generating Your Recipe")
+
+def get_image_base64(image_path):
+    with open(image_path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+    
+# Logout in sidebar
+cookies = EncryptedCookieManager(prefix="snapchef_", password=st.secrets["PASSWORD"])
+if cookies.ready():
+    with st.sidebar:
+        st.markdown("<br>" * 10, unsafe_allow_html=True)
+        if st.button("Log out", type="secondary", use_container_width=True):
+            del st.session_state["token"]
+            cookies["token"] = ""
+            cookies.save()
+            st.rerun()
+
+img_base64 = get_image_base64("Assets/banner_image.webp")
+
+st.markdown(f"""
+    <div style="
+        position: relative;
+        width: 100%;
+        height: 200px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    ">
+        <img src="data:image/webp;base64,{img_base64}" 
+             style="width: 100%; height: 100%; object-fit: cover;">
+        <div style="
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.85);
+            padding: 0.8rem 0;
+            text-align: center;
+        ">
+            <h1 style="
+                margin: 0;
+                font-size: 2.5rem;
+                color: #FF6B35;
+                letter-spacing: 2px;
+            ">🍳 SnapChef</h1>
+            <p style="margin: 0; color: #555; font-size: 0.95rem;">
+                Turn your ingredients into delicious recipes
+            </p>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 required_keys = ["serving_size", "cooking_time", "ingredients_list"]
 for k in required_keys:
@@ -213,14 +266,17 @@ SSTRICT RULES:
    - Skip that step entirely if the dish still makes sense without it
    - Substitute with the closest available ingredient from the user's list
    - If neither is possible, acknowledge the limitation honestly and simplify the dish
-4. If the available ingredients are too limited to make any real dish (e.g. only salt 
-   and water, or only one or two basic condiments with nothing to cook), do NOT invent 
-   a fake recipe. Instead, respond with warmth and light humour — something like 
+4. If the available ingredients cannot make a real edible dish — for example only salt 
+   and water, only condiments, or fewer than 2 meaningful food ingredients — do NOT 
+   generate a fake recipe. Water and salt alone do NOT count as a real dish. 
+   Seasoning alone (salt, pepper, oil) does NOT count as a real dish.
+   Instead respond with warmth and light humour, something like:
    "SnapChef works magic with limited ingredients, but even we need something to work 
-   with! With just [ingredients], the best dish we can offer is... a glass of water. 
-   Head back and add a few more ingredients — even something simple like an egg, some 
-   bread, or a vegetable goes a long way."
-   Keep the tone friendly and encouraging, not dismissive.
+   with! With just [list their ingredients], the most we can offer is a glass of water 
+   with a pinch of salt. Head back and add a few more ingredients — even an egg, some 
+   bread, or a vegetable goes a long way! 🍳"
+   Do NOT format this as a recipe. Just respond as a friendly message with no headings,
+   no ingredients list, no instructions section.
 5. Try to incorporate as many of the user's ingredients as possible into the recipe,
    but only if they make culinary sense together. Do not force ingredients that would
    ruin the dish. If an ingredient clearly does not belong (e.g. banana in a savory
@@ -248,7 +304,7 @@ Format in clean markdown:
 
 ---
 
-> 💡 **Tip:** [one practical tip]"""
+💡 **Tip:** [one practical tip]"""
 
 # STAGE 1: Retrieve recipes and detect missing ingredients 
 # On first run the recipe summary is not in the session state - retrieve the recipes 
@@ -358,11 +414,12 @@ else:
 # Check for appliances used in the recipe
 if "appliances_checked" not in st.session_state:
     appliance_check_prompt = f"""
-Read this recipe and list any kitchen appliances or tools it assumes the user has.
-Examples: oven, blender, microwave, whisk, mixer, food processor, stove, pan, pot, 
-knife, cutting board, refrigerator, bowl, baking tray, pressure cooker.
-Only list appliances actually needed — not mentioned as optional.
-Reply with a comma-separated list only. If none needed beyond basic utensils, reply "none".
+Read this recipe and list ONLY non-trivial kitchen appliances that not everyone owns.
+Include: oven, microwave, blender, food processor, stand mixer, hand mixer, 
+air fryer, pressure cooker, slow cooker, instant pot, waffle maker, toaster oven.
+Do NOT include: pan, pot, bowl, knife, spoon, spatula, cutting board, refrigerator, 
+baking tray, whisk — these are basic utensils everyone has.
+Reply with a comma-separated list only. If none, reply "none".
 Recipe: {st.session_state.recipe_generated}
 """
     appliance_result = llm_sync.invoke(appliance_check_prompt)
@@ -375,7 +432,7 @@ Recipe: {st.session_state.recipe_generated}
 
 if st.session_state.get("appliances_used"):
     appliances = ", ".join(st.session_state["appliances_used"])
-    st.caption(f"💡 This recipe uses: {appliances}. Don't have one? Ask in the chat below to adapt the recipe.")
+    st.info(f"💡 This recipe uses: {appliances}. Don't have one? Ask in the follow-up chat to adapt the recipe.")
 
 st.divider()
 

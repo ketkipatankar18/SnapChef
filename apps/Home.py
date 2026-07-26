@@ -229,18 +229,10 @@ if st.session_state["ingredients_list"] and st.button("🍳 Generate Recipe", us
     st.session_state["prompt"] = prompt
     st.switch_page("pages/GenerateRecipe.py")
 
-st.divider()
-
-# Logout
-# if st.button("Log out"):
-#     del st.session_state["token"]
-#     cookies["token"] = ""
-#     cookies.save()
-#     st.rerun()
-
 # Logout in sidebar
 with st.sidebar:
-    st.divider()
+    # Push logout to bottom using empty space
+    st.markdown("<br>" * 10, unsafe_allow_html=True)
     if st.button("Log out", type="secondary", use_container_width=True):
         del st.session_state["token"]
         cookies["token"] = ""
