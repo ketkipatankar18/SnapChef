@@ -20,7 +20,48 @@ cookies = EncryptedCookieManager(
 if not cookies.ready(): 
     st.stop()
 
-st.title("🍳 SnapChef: Recipe Suggestion RAG")
+def get_image_base64(image_path):
+    with open(image_path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+# st.title("🍳 SnapChef: Recipe Suggestion RAG")
+# st.title("🍳 SnapChef")
+
+img_base64 = get_image_base64("Assets/banner_image.webp")
+
+st.markdown(f"""
+    <div style="
+        position: relative;
+        width: 100%;
+        height: 200px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    ">
+        <img src="data:image/webp;base64,{img_base64}" 
+             style="width: 100%; height: 100%; object-fit: cover;">
+        <div style="
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.85);
+            padding: 0.8rem 0;
+            text-align: center;
+        ">
+            <h1 style="
+                margin: 0;
+                font-size: 2.5rem;
+                color: #FF6B35;
+                letter-spacing: 2px;
+            ">🍳 SnapChef</h1>
+            <p style="margin: 0; color: #555; font-size: 0.95rem;">
+                Turn your ingredients into delicious recipes
+            </p>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 with st.expander("ℹ️ What is SnapChef and how do I use it?"):
     st.markdown(
@@ -180,6 +221,9 @@ if st.session_state["ingredients_list"] and st.button("🍳 Generate Recipe", us
     st.session_state.pop("recipe_summary", None)
     st.session_state.pop("missing_ingredients", None)
     st.session_state.pop("chat_store", None)
+    st.session_state.pop("feedback_given", None)
+    st.session_state.pop("appliances_checked", None)
+    st.session_state.pop("appliances_used", None)
     st.session_state["serving_size"] = serving_size
     st.session_state["cooking_time"] = cooking_time
     st.session_state["prompt"] = prompt
@@ -188,8 +232,17 @@ if st.session_state["ingredients_list"] and st.button("🍳 Generate Recipe", us
 st.divider()
 
 # Logout
-if st.button("Log out"):
-    del st.session_state["token"]
-    cookies["token"] = ""
-    cookies.save()
-    st.rerun()
+# if st.button("Log out"):
+#     del st.session_state["token"]
+#     cookies["token"] = ""
+#     cookies.save()
+#     st.rerun()
+
+# Logout in sidebar
+with st.sidebar:
+    st.divider()
+    if st.button("Log out", type="secondary", use_container_width=True):
+        del st.session_state["token"]
+        cookies["token"] = ""
+        cookies.save()
+        st.rerun()

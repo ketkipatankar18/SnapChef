@@ -358,9 +358,11 @@ else:
 # Check for appliances used in the recipe
 if "appliances_checked" not in st.session_state:
     appliance_check_prompt = f"""
-Read this recipe and list any kitchen appliances it assumes the user has 
-(e.g. oven, blender, microwave, whisk, mixer, food processor, stove, pan, pot).
-Reply with a comma-separated list only. If none, reply "none".
+Read this recipe and list any kitchen appliances or tools it assumes the user has.
+Examples: oven, blender, microwave, whisk, mixer, food processor, stove, pan, pot, 
+knife, cutting board, refrigerator, bowl, baking tray, pressure cooker.
+Only list appliances actually needed — not mentioned as optional.
+Reply with a comma-separated list only. If none needed beyond basic utensils, reply "none".
 Recipe: {st.session_state.recipe_generated}
 """
     appliance_result = llm_sync.invoke(appliance_check_prompt)
