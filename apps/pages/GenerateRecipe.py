@@ -434,29 +434,29 @@ if st.session_state.get("appliances_used"):
     appliances = ", ".join(st.session_state["appliances_used"])
     st.info(f"💡 This recipe uses: {appliances}. Don't have one? Ask in the follow-up chat to adapt the recipe.")
 
-st.divider()
+# st.divider()
 
 # ── Human-in-the-loop feedback ────────────────────────────────────────────────
 # Collects real user signals — used as online quality metrics
 # Complements RAGAS (retrieval quality) and LLM-as-judge (generation quality)
 if "feedback_given" not in st.session_state:
-    st.markdown("""
-        <div style="
-            background: #FFF8F3;
-            border: 1px solid #FFD4B8;
-            border-radius: 10px;
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            margin: 0.5rem 0;
-        ">
-            <span style="font-size: 1.1rem; font-weight: 600; color: #333; white-space: nowrap;">
-                Was this recipe helpful?
-            </span>
-        </div>
-    """, unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1, 4])
+    col_q, col1, col2 = st.columns([3, 1, 1])
+    with col_q:
+        st.markdown("""
+            <div style="
+                background: #FFF8F3;
+                border: 1px solid #FFD4B8;
+                border-radius: 10px;
+                padding: 0.6rem 1.2rem;
+                height: 100%;
+                display: flex;
+                align-items: center;
+            ">
+                <span style="font-size: 1.1rem; font-weight: 600; color: #333;">
+                    Was this recipe helpful?
+                </span>
+            </div>
+        """, unsafe_allow_html=True)
     with col1:
         if st.button("👍 Great recipe", use_container_width=True):
             log_feedback(rating=1)
@@ -473,7 +473,7 @@ else:
     else:
         st.info("Thanks for the feedback! Try refining it in the chat below.")
 
-st.divider()
+# st.divider()
 
 # Follow-up Q&A
 st.markdown("#### 💬 Customize your recipe")
