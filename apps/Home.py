@@ -137,15 +137,21 @@ if 'token' not in st.session_state:
         redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501")
         # result = oauth2.authorize_button("Log in using Google", redirect_uri, "openid email profile")
         
+        # col1, col2, col3 = st.columns([1, 2, 1])
+        # with col2:
+        #     result = oauth2.authorize_button(
+        #         "Log in using Google", redirect_uri, "openid email profile"
+        #     )
+
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             result = oauth2.authorize_button(
-                "Log in using Google", redirect_uri, "openid email profile"
+                "Log in using Google",
+                redirect_uri,
+                "openid email profile",
+                key="google_oauth_button"
             )
         
-        redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501")
-        st.write("DEBUG redirect_uri:", redirect_uri)  # TEMPORARY
-        st.write("DEBUG result:", result)  # TEMPORARY
         # If and when login is successful, result["token"] is and OAuth2Token object
         if result and 'token' in result:
             # If authorization successful, save token in session state
