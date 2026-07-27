@@ -204,6 +204,9 @@ Classify the intent as exactly one of:
 - "dietary_restriction": user has a dietary need (vegan, gluten-free, etc.)
 - "serving_change": user wants different serving size
 - "recipe_tweak": user wants to adjust taste, spice level, texture, etc.
+- "question": user is asking an opinion, doubt, or question about the recipe or an 
+  ingredient combination — NOT directly asking for a change yet (e.g. "do you think 
+  X goes well with Y", "is this healthy", "would this taste good")
 - "off_topic": message is unrelated to cooking or the current recipe
 
 Reply in this exact format (JSON only, no other text):
@@ -223,22 +226,31 @@ def detect_missing_ingredients(recipe_summary: str, user_ingredients: list) -> l
 
     The user only has these ingredients: {', '.join(user_ingredients)}
 
-    List the ingredients mentioned in the recipes that the user does NOT have.
-    Rules:
-    - Return ingredient names only — no quantities, no units, no numbers
-    - No verbs, no preparation instructions (e.g. "minced", "chopped", "boiled")
-    - Just the plain ingredient name e.g. "garlic" not "2 cloves garlic, minced"
-    - For any ingredient that has an obvious generic or common form, list both the 
-    specific variant mentioned in the recipe and its generic form as separate options. 
-    For example, if the recipe uses "olive oil", also list "oil". If it uses "kosher 
-    salt", also list "salt". If it uses "basmati rice", also list "rice". If it uses 
-    "cheddar cheese", also list "cheese". This gives the user the choice of whichever 
-    version they actually have at home. Only do this when a genuine generic form 
-    exists, don't force it for ingredients that don't have one, such as "egg".
-    - Reply with a simple comma-separated list only
-    - If none are missing, reply with "none"
-    - Do not include pantry assumptions, only list things explicitly in the recipes above"""
+    STEP 1: List every ingredient mentioned in the recipes above that the user does NOT have.
+    Return plain ingredient names only — no quantities, no units, no prep verbs like "minced" or "chopped".
 
+    STEP 2: For EVERY ingredient in your Step 1 list, check if it is a specific variant of a 
+    more general/common ingredient category (this applies to oils, salts, sugars, rices, 
+    cheeses, vinegars, flours, milks, and similar pantry staples where a specific brand or 
+    type is named). If it is, you MUST add the generic version as an additional separate 
+    entry in your final list. This is not optional — do this for every applicable ingredient.
+
+    Examples of required expansions:
+    "olive oil" in Step 1 → both "olive oil" AND "oil" in final list
+    "kosher salt" in Step 1 → both "kosher salt" AND "salt" in final list
+    "basmati rice" in Step 1 → both "basmati rice" AND "rice" in final list
+    "cheddar cheese" in Step 1 → both "cheddar cheese" AND "cheese" in final list
+    "almond milk" in Step 1 → both "almond milk" AND "milk" in final list
+    "balsamic vinegar" in Step 1 → both "balsamic vinegar" AND "vinegar" in final list
+
+    Do NOT do this for ingredients with no meaningful generic form, such as "egg", 
+    "garlic", "zucchini", "chicken breast".
+
+    Now apply both steps to the recipes above and the user's ingredient list.
+
+    Reply with ONLY the final comma-separated list (after both steps) — no explanation, 
+    no step labels, no other text. If nothing is missing, reply with "none"."""
+        
     # return a comma seperated string as output
     result = llm_classify.invoke(detection_prompt)
     raw = result.content.strip()
@@ -520,6 +532,28 @@ for q, a in st.session_state["chat_history"]:
     with st.chat_message("assistant"):
         st.markdown(a)
 
+# confirmation buttons after a question-type response
+if st.session_state.get("pending_confirmation"):
+    col_yes, col_no = st.columns(2)
+    with col_yes:
+        if st.button("✅ Yes, update the recipe", use_container_width=True, key="confirm_yes"):
+            st.session_state["pending_confirmation"] = False
+            confirm_prompt = (
+                "Yes, please go ahead and update the recipe based on the suggestion you just made. "
+                "Format ingredients as plain names only — no quantities, no units, no preparation verbs. "
+                "Do not include a Tip section at the end."
+            )
+            with st.chat_message("assistant"):
+                confirm_response = st.write_stream(stream_text(confirm_prompt))
+            st.session_state["chat_history"].append(("Yes, please update it.", confirm_response))
+            st.session_state.pop("feedback_given", None)
+            st.rerun()
+    with col_no:
+        if st.button("❌ No, keep it as is", use_container_width=True, key="confirm_no"):
+            st.session_state["pending_confirmation"] = False
+            st.session_state["chat_history"].append(("No, keep it as is.", "No problem, keeping the recipe as is!"))
+            st.rerun()
+
 user_followup = st.chat_input("Ask a follow-up to refine your recipe...")
 
 if user_followup:
@@ -529,48 +563,66 @@ if user_followup:
     with st.spinner("Thinking..."):
         classification = classify_followup(user_followup, st.session_state["ingredients_list"])
 
-    if classification.get("intent") == "off_topic":
-        with st.chat_message("assistant"):
-            st.markdown(
-                "🤔 That doesn't seem related to your recipe. "
-                "Try asking me to adjust spice level, swap an ingredient, "
-                "change servings, or add a dietary restriction."
-            )
-        st.session_state["chat_history"].append((user_followup, "Off-topic — redirected user."))
+if classification.get("intent") == "off_topic":
+    with st.chat_message("assistant"):
+        st.markdown(
+            "🤔 That doesn't seem related to your recipe. "
+            "Try asking me to adjust spice level, swap an ingredient, "
+            "change servings, or add a dietary restriction."
+        )
+    st.session_state["chat_history"].append((user_followup, "Off-topic — redirected user."))
+
+elif classification.get("intent") == "question":
+    question_prompt = (
+        f"User message: {user_followup}\n"
+        f"This is a question or opinion-seeking comment, not a direct request to change "
+        f"the recipe. Answer honestly using your genuine culinary judgment — if the user "
+        f"is asking whether something would taste good together, give your real opinion. "
+        f"If you think a change would improve the dish, suggest exactly what you'd change. "
+        f"Do NOT modify or restate the full recipe yet. End with a short, natural question "
+        f"asking if they'd like you to update the recipe with your suggestion.\n"
+        f"Current ingredients: {', '.join(st.session_state['ingredients_list'])}."
+    )
+    with st.chat_message("assistant"):
+        question_response = st.write_stream(stream_text(question_prompt))
+    st.session_state["chat_history"].append((user_followup, question_response))
+    st.session_state["pending_confirmation"] = True
+
+else:
+    if classification.get("intent") == "add_ingredient":
+        new_ing = user_followup.strip().lower()
+        if new_ing not in st.session_state["ingredients_list"]:
+            st.session_state["ingredients_list"].append(new_ing)
+        followup_prompt = (
+            f"The user now also has: {new_ing}. "
+            f"Acknowledge this addition warmly in one sentence, then update the recipe. "
+            f"Full ingredient list: {', '.join(st.session_state['ingredients_list'])}. "
+            f"Only use ingredients from their list. "
+            f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped."
+            f"Do not include a Tip section at the end."
+        )
     else:
-        if classification.get("intent") == "add_ingredient":
-            new_ing = user_followup.strip().lower()
-            if new_ing not in st.session_state["ingredients_list"]:
-                st.session_state["ingredients_list"].append(new_ing)
-            followup_prompt = (
-                f"The user now also has: {new_ing}. "
-                f"Acknowledge this addition warmly in one sentence, then update the recipe. "
-                f"Full ingredient list: {', '.join(st.session_state['ingredients_list'])}. "
-                f"Only use ingredients from their list. "
-                f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped."
-                f"Do not include a Tip section at the end."
-            )
-        else:
-            followup_prompt = (
-                f"User message: {user_followup}\n"
-                f"Before responding, acknowledge the user's message warmly and naturally in one sentence — "
-                f"whether it is a request, a question, a doubt, or a comment. "
-                f"Then provide your response or updated recipe.\n"
-                f"Remember: only use ingredients from this list: {', '.join(st.session_state['ingredients_list'])}. "
-                f"If the user has explicitly mentioned a new ingredient in their message, you may include it, "
-                f"BUT you are not obligated to blindly agree to every addition. If an ingredient or combination "
-                f"clearly does not belong in the dish (e.g. chocolate in a savory masala stir-fry, edible flowers "
-                f"in a quick weeknight dish), say so honestly and with light humour instead of forcing it in. "
-                f"You can suggest it might work better as a separate dish, or gently push back and explain why "
-                f"it would clash, while still remaining warm and helpful. Use your genuine culinary judgment — "
-                f"you do not need to say yes just because the user suggested it.\n"
-                f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped. "
-                f"Do not include a Tip section at the end."
-            )
+        followup_prompt = (
+            f"User message: {user_followup}\n"
+            f"Before responding, acknowledge the user's message warmly and naturally in one sentence — "
+            f"whether it is a request, a question, a doubt, or a comment. "
+            f"Then provide your response or updated recipe.\n"
+            f"Remember: only use ingredients from this list: {', '.join(st.session_state['ingredients_list'])}. "
+            f"If the user has explicitly mentioned a new ingredient in their message, you may include it, "
+            f"BUT you are not obligated to blindly agree to every addition. If an ingredient or combination "
+            f"clearly does not belong in the dish (e.g. chocolate in a savory masala stir-fry, edible flowers "
+            f"in a quick weeknight dish), say so honestly and with light humour instead of forcing it in. "
+            f"You can suggest it might work better as a separate dish, or gently push back and explain why "
+            f"it would clash, while still remaining warm and helpful. Use your genuine culinary judgment — "
+            f"you do not need to say yes just because the user suggested it.\n"
+            f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped. "
+            f"Do not include a Tip section at the end."
+        )
 
-        with st.chat_message("assistant"):
-            followup_response = st.write_stream(stream_text(followup_prompt))
+    with st.chat_message("assistant"):
+        followup_response = st.write_stream(stream_text(followup_prompt))
 
-        st.session_state["chat_history"].append((user_followup, followup_response))
-        st.session_state.pop("feedback_given", None)  # reset so feedback shows for this new response
-        st.rerun()
+    st.session_state["chat_history"].append((user_followup, followup_response))
+
+st.session_state.pop("feedback_given", None)
+st.rerun()

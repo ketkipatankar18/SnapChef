@@ -195,18 +195,42 @@ if "ingredients_list" not in st.session_state:
     st.session_state["ingredients_list"] = []
 
 # Define helper function to add ingredient to list when input changes
+# def add_ingredient():
+#     ingredient = st.session_state.ingredient_input
+#     if ingredient and ingredient not in st.session_state["ingredients_list"]:
+#         st.session_state.ingredients_list.append(ingredient)
+#         st.session_state.ingredient_input = ""
+
 def add_ingredient():
     ingredient = st.session_state.ingredient_input
-    if ingredient and ingredient not in st.session_state["ingredients_list"]:
-        st.session_state.ingredients_list.append(ingredient)
+    quantity = st.session_state.get("quantity_input", "").strip()
+    if ingredient and ingredient not in [i.split(" (")[0] for i in st.session_state["ingredients_list"]]:
+        display = f"{ingredient} ({quantity})" if quantity else ingredient
+        st.session_state.ingredients_list.append(display)
         st.session_state.ingredient_input = ""
+        st.session_state.quantity_input = ""
+        
+# Text input for ingredient entry 
+# st.text_input(
+#     "Add an ingredient",
+#     key="ingredient_input",
+#     on_change=add_ingredient
+# )
 
-# Text input for ingredient entry
-st.text_input(
-    "Add an ingredient",
-    key="ingredient_input",
-    on_change=add_ingredient
-)
+# Text input for ingredient entry with optional quantity
+col_ing, col_qty = st.columns([3, 1])
+with col_ing:
+    st.text_input(
+        "Add an ingredient",
+        key="ingredient_input",
+        on_change=add_ingredient
+    )
+with col_qty:
+    st.text_input(
+        "Quantity (optional)",
+        key="quantity_input",
+        placeholder="e.g. 2 cups"
+    )
 
 # Checkbox to add list of ingredients one by one
 if st.session_state["ingredients_list"]:
@@ -262,4 +286,5 @@ with st.sidebar:
         del st.session_state["token"]
         cookies["token"] = ""
         cookies.save()
+        st.session_state["just_logged_out"] = True
         st.rerun()
