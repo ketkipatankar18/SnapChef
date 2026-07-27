@@ -228,11 +228,13 @@ def detect_missing_ingredients(recipe_summary: str, user_ingredients: list) -> l
     - Return ingredient names only — no quantities, no units, no numbers
     - No verbs, no preparation instructions (e.g. "minced", "chopped", "boiled")
     - Just the plain ingredient name e.g. "garlic" not "2 cloves garlic, minced"
-    - Generalize specific ingredient variants to their common form — e.g. "olive oil", 
-    "vegetable oil", or "canola oil" should all be suggested simply as "oil". 
-    Similarly "kosher salt" or "sea salt" should just be "salt". Only keep a 
-    specific variant if it's genuinely distinct (e.g. "coconut milk" vs "milk" 
-    are different ingredients, not variants of the same thing)
+    - For any ingredient that has an obvious generic or common form, list both the 
+    specific variant mentioned in the recipe and its generic form as separate options. 
+    For example, if the recipe uses "olive oil", also list "oil". If it uses "kosher 
+    salt", also list "salt". If it uses "basmati rice", also list "rice". If it uses 
+    "cheddar cheese", also list "cheese". This gives the user the choice of whichever 
+    version they actually have at home. Only do this when a genuine generic form 
+    exists, don't force it for ingredients that don't have one, such as "egg".
     - Reply with a simple comma-separated list only
     - If none are missing, reply with "none"
     - Do not include pantry assumptions, only list things explicitly in the recipes above"""
