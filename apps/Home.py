@@ -115,18 +115,22 @@ oauth2 = OAuth2Component(
 
 # Handle login flow - 3 scenarios
 if 'token' not in st.session_state:
-    saved_token_str = cookies.get("token")
-    # Sceanrio 1 - token already in cookie but not current session
-    if saved_token_str:
-        try: 
-            # We will deserialize the json and restore to session
-            st.session_state.token = json.loads(saved_token_str)
-        except (json.JSONDecodeError, TypeError):
-            # Cookie is corrupted — clear it and force re-login
-            cookies["token"] = ""
-            cookies.save()
-    # Sceanrio 2 - token not in both cookie and current session
+    if st.session_state.pop("just_logged_out", False):
+        # Skip cookie restore this one time — cookie may still be
+        # mid-sync from the logout that just happened
+        saved_token_str = None
     else:
+        saved_token_str = cookies.get("token")
+        if saved_token_str:
+            try:
+                # We will deserialize the json and restore to session
+                st.session_state.token = json.loads(saved_token_str)
+            except (json.JSONDecodeError, TypeError):
+                # Cookie is corrupted, clear it and force re-login
+                cookies["token"] = ""
+                cookies.save()
+    # Sceanrio 2 - token not in both cookie and current session
+    if not saved_token_str:
         # Show the google login button
         # result = oauth2.authorize_button("Log in using Google","http://localhost:8501", "openid email profile")
 

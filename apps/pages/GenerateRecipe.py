@@ -44,6 +44,7 @@ with st.sidebar:
         del st.session_state["token"]
         cookies["token"] = ""
         cookies.save()
+        st.session_state["just_logged_out"] = True
         st.switch_page("Home.py")
 
 # Display the banner image with application title followed by a description
