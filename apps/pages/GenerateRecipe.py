@@ -577,6 +577,42 @@ for q, a in st.session_state["chat_history"]:
     with st.chat_message("assistant"):
         st.markdown(a)
 
+# Human-in-the-loop feedback
+# Only appears after a follow-up has actually changed the recipe
+if st.session_state.get("chat_history") and "followup_feedback_given" not in st.session_state:
+    col_q, col1, col2 = st.columns([3, 1, 1])
+    with col_q:
+        st.markdown("""
+            <div style="
+                background: #FFF8F3;
+                border: 1px solid #FFD4B8;
+                border-radius: 10px;
+                padding: 0.6rem 1.2rem;
+                height: 100%;
+                display: flex;
+                align-items: center;
+            ">
+                <span style="font-size: 1.1rem; font-weight: 600; color: #333;">
+                    Was this updated recipe helpful?
+                </span>
+            </div>
+        """, unsafe_allow_html=True)
+    with col1:
+        if st.button("👍 Great update", use_container_width=True, key="followup_thumbs_up"):
+            log_feedback(rating=1)
+            st.session_state["followup_feedback_given"] = "positive"
+            st.rerun()
+    with col2:
+        if st.button("👎 Not quite", use_container_width=True, key="followup_thumbs_down"):
+            log_feedback(rating=0)
+            st.session_state["followup_feedback_given"] = "negative"
+            st.rerun()
+elif st.session_state.get("followup_feedback_given"):
+    if st.session_state["followup_feedback_given"] == "positive":
+        st.success("Thanks for the feedback! Glad the update worked 🎉")
+    else:
+        st.info("Thanks for the feedback! Keep refining in the chat below.")
+
 # confirmation buttons after a question-type response
 if st.session_state.get("pending_confirmation"):
     col_yes, col_no = st.columns(2)
@@ -591,7 +627,8 @@ if st.session_state.get("pending_confirmation"):
             with st.chat_message("assistant"):
                 confirm_response = st.write_stream(stream_text(confirm_prompt))
             st.session_state["chat_history"].append(("Yes, please update it.", confirm_response))
-            st.session_state.pop("feedback_given", None)
+            # st.session_state.pop("feedback_given", None)
+            st.session_state.pop("followup_feedback_given", None)
             st.rerun()
     with col_no:
         if st.button("❌ No, keep it as is", use_container_width=True, key="confirm_no"):
@@ -620,7 +657,8 @@ if user_followup:
             with st.chat_message("assistant"):
                 confirm_response = st.write_stream(stream_text(confirm_prompt))
             st.session_state["chat_history"].append((user_followup, confirm_response))
-            st.session_state.pop("feedback_given", None)
+            # st.session_state.pop("feedback_given", None)
+            st.session_state.pop("followup_feedback_given", None)
             st.rerun()
             handled_as_confirmation = True
         elif normalized in ("no", "n", "nope", "keep it", "keep as is", "no thanks"):
@@ -699,6 +737,6 @@ if user_followup:
                 followup_response = st.write_stream(stream_text(followup_prompt))
 
             st.session_state["chat_history"].append((user_followup, followup_response))
-
-        st.session_state.pop("feedback_given", None)
+            st.session_state.pop("followup_feedback_given", None)
+        # st.session_state.pop("feedback_given", None)
         st.rerun()
