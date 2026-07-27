@@ -201,15 +201,6 @@ if "ingredients_list" not in st.session_state:
 #         st.session_state.ingredients_list.append(ingredient)
 #         st.session_state.ingredient_input = ""
 
-def add_ingredient():
-    ingredient = st.session_state.ingredient_input
-    quantity = st.session_state.get("quantity_input", "").strip()
-    if ingredient and ingredient not in [i.split(" (")[0] for i in st.session_state["ingredients_list"]]:
-        display = f"{ingredient} ({quantity})" if quantity else ingredient
-        st.session_state.ingredients_list.append(display)
-        st.session_state.ingredient_input = ""
-        st.session_state.quantity_input = ""
-        
 # Text input for ingredient entry 
 # st.text_input(
 #     "Add an ingredient",
@@ -217,32 +208,71 @@ def add_ingredient():
 #     on_change=add_ingredient
 # )
 
-# Text input for ingredient entry with optional quantity
-col_ing, col_qty = st.columns([3, 1])
-with col_ing:
-    st.text_input(
-        "Add an ingredient",
-        key="ingredient_input",
-        on_change=add_ingredient
-    )
-with col_qty:
-    st.text_input(
-        "Quantity (optional)",
-        key="quantity_input",
-        placeholder="e.g. 2 cups"
-    )
+def add_ingredient():
+    ingredient = st.session_state.ingredient_input.strip()
+    if ingredient and ingredient not in st.session_state["ingredients_list"]:
+        st.session_state.ingredients_list.append(ingredient)
+        st.session_state.ingredient_input = ""
+
+# Text input for ingredient entry — quantity is set afterward via stepper
+st.text_input(
+    "Add an ingredient",
+    key="ingredient_input",
+    on_change=add_ingredient
+)
+st.caption(
+    "💡 Add a quantity next to each ingredient below if it can be measured (e.g. vegetables). "
+    "Leave it at '–' for things like salt or soy sauce that aren't usually measured by count."
+)
 
 # Checkbox to add list of ingredients one by one
+# if st.session_state["ingredients_list"]:
+#     st.caption("Check ingredients to remove, then click Remove selected")
+#     checked = []
+#     for i, ing in enumerate(st.session_state["ingredients_list"]):
+#         if st.checkbox(ing, key=f"chk_{i}"):
+#             checked.append(i)
+
+#     st.success(
+#         f"✅ {len(st.session_state['ingredients_list'])} ingredient(s): "
+#         f"{', '.join(st.session_state['ingredients_list'])}"
+#     )
+# Initialize quantity tracking dict if not present
+if "ingredient_quantities" not in st.session_state:
+    st.session_state["ingredient_quantities"] = {}
+
+# Checkbox to select for removal + quantity stepper for each ingredient
 if st.session_state["ingredients_list"]:
     st.caption("Check ingredients to remove, then click Remove selected")
     checked = []
     for i, ing in enumerate(st.session_state["ingredients_list"]):
-        if st.checkbox(ing, key=f"chk_{i}"):
-            checked.append(i)
+        col_chk, col_name, col_qty = st.columns([1, 4, 2])
+        with col_chk:
+            if st.checkbox("", key=f"chk_{i}", label_visibility="collapsed"):
+                checked.append(i)
+        with col_name:
+            st.write(ing)
+        with col_qty:
+            qty = st.number_input(
+                "Qty",
+                min_value=0,
+                value=st.session_state["ingredient_quantities"].get(ing, 0),
+                step=1,
+                key=f"qty_{ing}_{i}",  # tied to ingredient name + index for uniqueness
+                label_visibility="collapsed",
+                help="0 means unspecified — used for things like salt or soy sauce"
+            )
+            st.session_state["ingredient_quantities"][ing] = qty
+
+    # Build a display string combining ingredient + quantity for the summary
+    display_items = []
+    for ing in st.session_state["ingredients_list"]:
+        qty = st.session_state["ingredient_quantities"].get(ing, 0)
+        display_items.append(f"{ing} ({qty})" if qty > 0 else ing)
 
     st.success(
         f"✅ {len(st.session_state['ingredients_list'])} ingredient(s): "
-        f"{', '.join(st.session_state['ingredients_list'])}"
+        f"{', '.join(display_items)}"
     )
 
     col1, col2 = st.columns([1, 1])
@@ -264,6 +294,21 @@ prompt = st.text_area("Describe preferences", placeholder="e.g., I want a spicy,
 if not st.session_state["ingredients_list"]:
     st.info("Add at least one ingredient to generate a recipe.")
 
+# if st.session_state["ingredients_list"] and st.button("🍳 Generate Recipe", use_container_width=True):
+#     st.session_state.pop("recipe_generated", None)
+#     st.session_state.pop("memory", None)
+#     st.session_state.pop("chat_history", None)
+#     st.session_state.pop("recipe_summary", None)
+#     st.session_state.pop("missing_ingredients", None)
+#     st.session_state.pop("chat_store", None)
+#     st.session_state.pop("feedback_given", None)
+#     st.session_state.pop("appliances_checked", None)
+#     st.session_state.pop("appliances_used", None)
+#     st.session_state["serving_size"] = serving_size
+#     st.session_state["cooking_time"] = cooking_time
+#     st.session_state["prompt"] = prompt
+#     st.switch_page("pages/GenerateRecipe.py")
+
 if st.session_state["ingredients_list"] and st.button("🍳 Generate Recipe", use_container_width=True):
     st.session_state.pop("recipe_generated", None)
     st.session_state.pop("memory", None)
@@ -274,6 +319,14 @@ if st.session_state["ingredients_list"] and st.button("🍳 Generate Recipe", us
     st.session_state.pop("feedback_given", None)
     st.session_state.pop("appliances_checked", None)
     st.session_state.pop("appliances_used", None)
+
+    # Build final ingredient list with quantities included where specified
+    final_ingredients = []
+    for ing in st.session_state["ingredients_list"]:
+        qty = st.session_state["ingredient_quantities"].get(ing, 0)
+        final_ingredients.append(f"{ing} ({qty})" if qty > 0 else ing)
+
+    st.session_state["ingredients_list"] = final_ingredients
     st.session_state["serving_size"] = serving_size
     st.session_state["cooking_time"] = cooking_time
     st.session_state["prompt"] = prompt
