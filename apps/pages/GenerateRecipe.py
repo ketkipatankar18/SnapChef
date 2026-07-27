@@ -586,21 +586,7 @@ for q, a in st.session_state["chat_history"]:
 if st.session_state.get("last_followup_was_update") and "followup_feedback_given" not in st.session_state:
     col_q, col1, col2 = st.columns([3, 1, 1])
     with col_q:
-        st.markdown("""
-            <div style="
-                background: #FFF8F3;
-                border: 1px solid #FFD4B8;
-                border-radius: 10px;
-                padding: 0.6rem 1.2rem;
-                height: 100%;
-                display: flex;
-                align-items: center;
-            ">
-                <span style="font-size: 1.1rem; font-weight: 600; color: #333;">
-                    Was this updated recipe helpful?
-                </span>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown("""...""", unsafe_allow_html=True)
     with col1:
         if st.button("👍 Great update", use_container_width=True, key="followup_thumbs_up"):
             log_feedback(rating=1)
@@ -611,7 +597,7 @@ if st.session_state.get("last_followup_was_update") and "followup_feedback_given
             log_feedback(rating=0)
             st.session_state["followup_feedback_given"] = "negative"
             st.rerun()
-elif st.session_state.get("followup_feedback_given"):
+elif st.session_state.get("last_followup_was_update") and st.session_state.get("followup_feedback_given"):
     if st.session_state["followup_feedback_given"] == "positive":
         st.success("Thanks for the feedback! Glad the update worked 🎉")
     else:
