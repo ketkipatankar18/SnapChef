@@ -506,7 +506,8 @@ else: # If no new ongredients were added the original recipe_generated would sti
 
 # Check for appliances used in the recipe
 if "appliances_checked" not in st.session_state:
-    appliance_check_prompt = f"""
+    with st.spinner("Checking if any special equipment is needed..."):
+        appliance_check_prompt = f"""
 Read this recipe and list ONLY non-trivial kitchen appliances that not everyone owns.
 Include: oven, microwave, blender, food processor, stand mixer, hand mixer, 
 air fryer, pressure cooker, slow cooker, instant pot, waffle maker, toaster oven.
@@ -515,7 +516,7 @@ baking tray, whisk — these are basic utensils everyone has.
 Reply with a comma-separated list only. If none, reply "none".
 Recipe: {st.session_state.recipe_generated}
 """
-    appliance_result = llm_classify.invoke(appliance_check_prompt)
+        appliance_result = llm_classify.invoke(appliance_check_prompt)
     raw = appliance_result.content.strip().lower()
     if raw != "none" and raw:
         st.session_state["appliances_used"] = [a.strip() for a in raw.split(",") if a.strip()]

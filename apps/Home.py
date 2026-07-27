@@ -143,6 +143,8 @@ if 'token' not in st.session_state:
                 "Log in using Google", redirect_uri, "openid email profile"
             )
         
+        redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501")
+        st.write("DEBUG redirect_uri:", redirect_uri)  # TEMPORARY
         st.write("DEBUG result:", result)  # TEMPORARY
         # If and when login is successful, result["token"] is and OAuth2Token object
         if result and 'token' in result:
