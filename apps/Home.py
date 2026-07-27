@@ -142,7 +142,8 @@ if 'token' not in st.session_state:
             result = oauth2.authorize_button(
                 "Log in using Google", redirect_uri, "openid email profile"
             )
-            
+        
+        st.write("DEBUG result:", result)  # TEMPORARY
         # If and when login is successful, result["token"] is and OAuth2Token object
         if result and 'token' in result:
             # If authorization successful, save token in session state
@@ -218,15 +219,12 @@ def add_ingredient():
 st.text_input(
     "Add an ingredient",
     key="ingredient_input",
-    on_change=add_ingredient
+    on_change=add_ingredient,
+    help="Once you add an ingredient, you'll be able to set a quantity for it. "
+         "Add a quantity if the ingredient can be measured (e.g. vegetables). "
+         "Leave it as 0 for condiments or liquids that aren't usually counted."
 )
-st.markdown(
-    """<p style="font-size: 0.85rem; color: #666; margin-top: 0.3rem;">
-    💡 Add a quantity below if the ingredient can be measured (e.g. vegetables). 
-    Leave it as 0 for condiments or liquids that aren't usually counted.
-    </p>""",
-    unsafe_allow_html=True
-)
+
 # Checkbox to add list of ingredients one by one
 # if st.session_state["ingredients_list"]:
 #     st.caption("Check ingredients to remove, then click Remove selected")
