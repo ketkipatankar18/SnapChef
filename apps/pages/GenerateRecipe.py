@@ -639,13 +639,14 @@ if user_followup:
             classification = classify_followup(user_followup, st.session_state["ingredients_list"])
 
         if classification.get("intent") == "off_topic":
+            off_topic_response = (
+                "🤔 That doesn't seem related to your recipe. "
+                "Try asking me to adjust spice level, swap an ingredient, "
+                "change servings, or add a dietary restriction."
+            )
             with st.chat_message("assistant"):
-                st.markdown(
-                    "🤔 That doesn't seem related to your recipe. "
-                    "Try asking me to adjust spice level, swap an ingredient, "
-                    "change servings, or add a dietary restriction."
-                )
-            st.session_state["chat_history"].append((user_followup, "Off-topic — redirected user."))
+                st.markdown(off_topic_response)
+            st.session_state["chat_history"].append((user_followup, off_topic_response))
 
         elif classification.get("intent") == "question":
             question_prompt = (
@@ -680,16 +681,16 @@ if user_followup:
                 followup_prompt = (
                     f"User message: {user_followup}\n"
                     f"Before responding, acknowledge the user's message warmly and naturally in one sentence — "
-                    f"whether it is a request, a question, a doubt, or a comment. "
-                    f"Then provide your response or updated recipe.\n"
+                    f"whether it is a request, a question, a doubt, or a comment.\n"
                     f"Remember: only use ingredients from this list: {', '.join(st.session_state['ingredients_list'])}. "
                     f"If the user has explicitly mentioned a new ingredient in their message, you may include it, "
                     f"BUT you are not obligated to blindly agree to every addition. If an ingredient or combination "
                     f"clearly does not belong in the dish (e.g. chocolate in a savory masala stir-fry, edible flowers "
-                    f"in a quick weeknight dish), say so honestly and with light humour instead of forcing it in. "
-                    f"You can suggest it might work better as a separate dish, or gently push back and explain why "
-                    f"it would clash, while still remaining warm and helpful. Use your genuine culinary judgment — "
-                    f"you do not need to say yes just because the user suggested it.\n"
+                    f"in a quick weeknight dish), say so honestly and with light humour instead of forcing it in.\n\n"
+                    f"IMPORTANT: If you decide NOT to add the suggested ingredient (the recipe stays unchanged), "
+                    f"do NOT restate or redisplay the full recipe. Just give a brief 1-3 sentence explanation of "
+                    f"why it wouldn't work well, in a warm and friendly tone. Only show the full updated recipe "
+                    f"(with dish name, ingredients, and instructions) if you are ACTUALLY making a change to it.\n"
                     f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped. "
                     f"Do not include a Tip section at the end."
                 )
