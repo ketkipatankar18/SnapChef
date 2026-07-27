@@ -555,8 +555,14 @@ if user_followup:
                 f"whether it is a request, a question, a doubt, or a comment. "
                 f"Then provide your response or updated recipe.\n"
                 f"Remember: only use ingredients from this list: {', '.join(st.session_state['ingredients_list'])}. "
-                f"If the user has explicitly mentioned a new ingredient in their message, you may include it. "
-                f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped."
+                f"If the user has explicitly mentioned a new ingredient in their message, you may include it, "
+                f"BUT you are not obligated to blindly agree to every addition. If an ingredient or combination "
+                f"clearly does not belong in the dish (e.g. chocolate in a savory masala stir-fry, edible flowers "
+                f"in a quick weeknight dish), say so honestly and with light humour instead of forcing it in. "
+                f"You can suggest it might work better as a separate dish, or gently push back and explain why "
+                f"it would clash, while still remaining warm and helpful. Use your genuine culinary judgment — "
+                f"you do not need to say yes just because the user suggested it.\n"
+                f"Format ingredients as plain names only — no quantities, no units, no preparation verbs like minced or chopped. "
                 f"Do not include a Tip section at the end."
             )
 
@@ -564,3 +570,5 @@ if user_followup:
             followup_response = st.write_stream(stream_text(followup_prompt))
 
         st.session_state["chat_history"].append((user_followup, followup_response))
+        st.session_state.pop("feedback_given", None)  # reset so feedback shows for this new response
+        st.rerun()

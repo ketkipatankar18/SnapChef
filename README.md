@@ -71,8 +71,8 @@ BM25 Index (in-memory)   Pinecone Vector DB (500,471 vectors)
 |--------|-------|
 | Faithfulness | 0.844 |
 | Answer Relevancy | 0.804 |
-| Context Recall | 0.340 |
-| Context Precision | 0.305 |
+<!-- | Context Recall | 0.340 | -->
+<!-- | Context Precision | 0.305 | -->
 
 Test set generated using RAGAS `TestsetGenerator` with 7 domain-specific personas from 400 sampled recipes, evaluated against the live hybrid retrieval pipeline (BM25 + Pinecone, top-10, RRF k=60).
 
