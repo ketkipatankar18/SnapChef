@@ -220,11 +220,13 @@ st.text_input(
     key="ingredient_input",
     on_change=add_ingredient
 )
-st.caption(
-    "💡 Add a quantity next to each ingredient below if it can be measured (e.g. vegetables). "
-    "Leave it at '–' for things like salt or soy sauce that aren't usually measured by count."
+st.markdown(
+    """<p style="font-size: 0.85rem; color: #666; margin-top: 0.3rem;">
+    💡 Add a quantity below if the ingredient can be measured (e.g. vegetables). 
+    Leave it as 0 for condiments or liquids that aren't usually counted.
+    </p>""",
+    unsafe_allow_html=True
 )
-
 # Checkbox to add list of ingredients one by one
 # if st.session_state["ingredients_list"]:
 #     st.caption("Check ingredients to remove, then click Remove selected")

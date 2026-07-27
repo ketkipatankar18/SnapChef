@@ -252,17 +252,61 @@ def detect_missing_ingredients(recipe_summary: str, user_ingredients: list) -> l
     no step labels, no other text. If nothing is missing, reply with "none"."""
         
     # return a comma seperated string as output
+    # result = llm_classify.invoke(detection_prompt)
+    # raw = result.content.strip()
+    # if raw.lower() == "none" or not raw:
+    #     return []
+    # seen = set()
+    # result = []
+    # for i in raw.split(","):
+    #     cleaned = i.strip().lower()
+    #     if cleaned and cleaned not in seen:
+    #         seen.add(cleaned)
+    #         result.append(i.strip())
+    # return result
+
     result = llm_classify.invoke(detection_prompt)
     raw = result.content.strip()
     if raw.lower() == "none" or not raw:
         return []
+
+    # Code-level safety net — guarantees generic forms are added even when
+    # This is intentionally small and covers only the most common pantry
+    # staples where a generic fallback genuinely helps the user.
+    GENERIC_FALLBACK = {
+        "oil": ["olive oil", "vegetable oil", "canola oil", "sesame oil",
+                "coconut oil", "sunflower oil", "peanut oil", "avocado oil", "corn oil"],
+        "salt": ["kosher salt", "sea salt", "table salt", "himalayan salt"],
+        "sugar": ["brown sugar", "white sugar", "granulated sugar", "cane sugar", "powdered sugar"],
+        "rice": ["basmati rice", "jasmine rice", "long grain rice", "brown rice", "white rice"],
+        "cheese": ["cheddar cheese", "mozzarella cheese", "parmesan cheese"],
+        "milk": ["almond milk", "coconut milk", "oat milk", "soy milk"],
+        "vinegar": ["balsamic vinegar", "apple cider vinegar", "rice vinegar", "white vinegar"],
+        "flour": ["all-purpose flour", "whole wheat flour", "self-rising flour"],
+        "butter": ["unsalted butter", "salted butter"],
+    }
+    # Build a reverse lookup: specific variant → generic form
+    variant_to_generic = {
+        variant: generic
+        for generic, variants in GENERIC_FALLBACK.items()
+        for variant in variants
+    }
+
     seen = set()
     result = []
     for i in raw.split(","):
         cleaned = i.strip().lower()
-        if cleaned and cleaned not in seen:
-            seen.add(cleaned)
-            result.append(i.strip())
+        if not cleaned or cleaned in seen:
+            continue
+        seen.add(cleaned)
+        result.append(i.strip())
+
+        # Guarantee the generic form is present, regardless of LLM compliance
+        generic = variant_to_generic.get(cleaned)
+        if generic and generic not in seen:
+            seen.add(generic)
+            result.append(generic)
+
     return result
 
 def log_feedback(rating: int):
