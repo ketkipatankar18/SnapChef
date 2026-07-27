@@ -3,6 +3,9 @@
 # Import libraries
 import json
 import base64
+import csv
+import os
+from datetime import datetime
 import streamlit as st
 import requests
 from langchain_openai import ChatOpenAI
@@ -11,6 +14,7 @@ from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from streamlit_cookies_manager import EncryptedCookieManager
 
+# Remove padding at the top of the main content, so banner starts at level with sidebar buttons
 st.markdown("""
     <style>
         .block-container {
@@ -18,7 +22,6 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
-# st.title("👩‍🍳 SnapChef: Generating Your Recipe")
 
 def get_image_base64(image_path):
     with open(image_path, "rb") as f:
@@ -26,22 +29,24 @@ def get_image_base64(image_path):
     
 # Logout in sidebar
 cookies = EncryptedCookieManager(prefix="snapchef_", password=st.secrets["PASSWORD"])
-if cookies.ready():
-    with st.sidebar:
-        st.markdown(
-            """
-            <div style="position: fixed; bottom: 2rem; width: 14rem;">
-            """,
-            unsafe_allow_html=True
-        )
-        if st.button("Log out", type="secondary", use_container_width=True):
-            del st.session_state["token"]
-            cookies["token"] = ""
-            cookies.save()
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+if not cookies.ready():
+    st.stop()
 
+# Guard, to handle case where user clicks log out and is no more logged in, redirect to Home
+if "token" not in st.session_state:
+    st.switch_page("Home.py")
+    st.stop()
 
+# Log out button in sidebar
+with st.sidebar:
+    st.markdown("<br>" * 20, unsafe_allow_html=True)
+    if st.button("Log out", type="secondary", use_container_width=True):
+        del st.session_state["token"]
+        cookies["token"] = ""
+        cookies.save()
+        st.switch_page("Home.py")
+
+# Display the banner image with application title followed by a description
 img_base64 = get_image_base64("Assets/banner_image.webp")
 
 st.markdown(f"""
@@ -78,6 +83,19 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
+# To improve the font size of context text 
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 1rem !important;
+        }
+        .stMarkdown p, .stMarkdown li, .stCaption, label, .stSelectbox, .stTextInput {
+            font-size: 1.05rem !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# We cannot proceed further without certian user entries, although handles in Home additional caution taken here
 required_keys = ["serving_size", "cooking_time", "ingredients_list"]
 for k in required_keys:
     if k not in st.session_state:
@@ -102,7 +120,7 @@ llm = ChatOpenAI(
 # Without streaming, the API waits until the entire response is finished, then sends it all at once. 
 # For classification you don't want streaming, you need the complete JSON {"intent": "add_ingredient"} before you can parse it.
 # Need full JSON before we do anything
-llm_sync = ChatOpenAI(
+llm_classify = ChatOpenAI(
     openai_api_key=st.secrets["OPEN_AI_API_KEY"],
     model="gpt-4o-mini",
     streaming=False,
@@ -171,7 +189,8 @@ def stream_text(input_text):
 
 def classify_followup(user_message: str, current_ingredients: list) -> dict:
     """
-    This function, sends out a message to llm with the user's message and current ingredients. Strict response format followed."""
+    This function, sends out a message to llm with the user's message and current ingredients. Strict response format followed.
+    """
     
     classification_prompt = f"""You are classifying a follow-up message in a recipe app.
 
@@ -189,7 +208,7 @@ Classify the intent as exactly one of:
 Reply in this exact format (JSON only, no other text):
 {{"intent": "add_ingredient", "safe": true, "reason": "user wants to add cinnamon"}}"""
 
-    result = llm_sync.invoke(classification_prompt)
+    result = llm_classify.invoke(classification_prompt)
     try:
         # Parse the string into a python dict
         return json.loads(result.content)
@@ -213,7 +232,7 @@ Rules:
 - Do not include pantry assumptions, only list things explicitly in the recipes above"""
 
     # return a comma seperated string as output
-    result = llm_sync.invoke(detection_prompt)
+    result = llm_classify.invoke(detection_prompt)
     raw = result.content.strip()
     if raw.lower() == "none" or not raw:
         return []
@@ -225,22 +244,14 @@ Rules:
             seen.add(cleaned)
             result.append(i.strip())
     return result
-    # return [i.strip() for i in raw.split(",") if i.strip()]
 
 def log_feedback(rating: int):
     """
     Logs user feedback to a CSV file for offline analysis.
     rating=1 means positive (thumbs up), rating=0 means negative (thumbs down).
-    
-    This is the human-in-the-loop (HITL) feedback loop:
-    - Complements RAGAS offline eval (retrieval quality)
-    - Complements LLM-as-judge (generation quality)
-    - Provides real user signals for future A/B testing
+    This is the human-in-the-loop (HITL) feedback loop. 
+    This provides real user signals for future A/B testing
     """
-    import csv
-    import os
-    from datetime import datetime
-
     feedback_dir = "eval_results"
     os.makedirs(feedback_dir, exist_ok=True)
     feedback_path = os.path.join(feedback_dir, "user_feedback.csv")
@@ -267,60 +278,63 @@ def log_feedback(rating: int):
         
 def build_llm_prompt():
     """
-    Build the actual recipe generation prompt"""
+    Build the actual recipe generation prompt
+    """
+
     return f"""The user wants: "{prompt_text}".
 
-Retrieved recipes for inspiration:
-{st.session_state.get("recipe_summary", "")}
+    Retrieved recipes for inspiration:
+    {st.session_state.get("recipe_summary", "")}
 
-SSTRICT RULES:
-1. ONLY use these ingredients: {', '.join(st.session_state["ingredients_list"])}
-2. Do NOT add any other ingredients, not even pantry staples like salt or oil
-3. If a cooking step requires an ingredient not in the user's list, either:
-   - Skip that step entirely if the dish still makes sense without it
-   - Substitute with the closest available ingredient from the user's list
-   - If neither is possible, acknowledge the limitation honestly and simplify the dish
-4. If the available ingredients are too limited to make any real dish (e.g. only salt 
-   and water, or only one or two basic condiments with nothing to cook), do NOT invent 
-   a fake recipe. Instead, respond with warmth and light humour — something like 
-   "SnapChef works magic with limited ingredients, but even we need something to work 
-   with! With just [ingredients], the best dish we can offer is... a glass of water. 
-   Head back and add a few more ingredients, even something simple like an egg, some 
-   bread, or a vegetable goes a long way."
-   Keep the tone friendly and encouraging, not dismissive.
-   Only trigger this if there are truly no cookable ingredients — water and salt alone,
-   or a single seasoning. Do NOT trigger this if the user has any real food ingredients
-   like vegetables, grains, dairy, meat, or fruit.
-5. Try to incorporate as many of the user's ingredients as possible into the recipe,
-   but only if they make culinary sense together. Do not force ingredients that would
-   ruin the dish. If an ingredient clearly does not belong (e.g. banana in a savory
-   pasta), leave it out silently, do not mention it or apologize for not using it.
-6. You may always assume water is available for boiling, cooking, or washing, even if not listed
+    STRICT RULES:
+    1. ONLY use these ingredients: {', '.join(st.session_state["ingredients_list"])}
+    2. Do NOT add any other ingredients, not even pantry staples like salt or oil
+    3. If a cooking step requires an ingredient not in the user's list, either:
+    - Skip that step entirely if the dish still makes sense without it
+    - Substitute with the closest available ingredient from the user's list
+    - If neither is possible, acknowledge the limitation honestly and simplify the dish
+    4. If the available ingredients are too limited to make any real dish (e.g. only salt 
+    and water, or only one or two basic condiments with nothing to cook), do NOT invent 
+    a fake recipe. Instead, respond with warmth and light humour — something like 
+    "SnapChef works magic with limited ingredients, but even we need something to work 
+    with! With just [ingredients], the best dish we can offer is... a glass of water. 
+    Head back and add a few more ingredients, even something simple like an egg, some 
+    bread, or a vegetable goes a long way."
+    Keep the tone friendly and encouraging, not dismissive.
+    Only trigger this if there are truly no cookable ingredients — water and salt alone,
+    or a single seasoning. Do NOT trigger this if the user has any real food ingredients
+    like vegetables, grains, dairy, meat, or fruit.
+    5. Try to incorporate as many of the user's ingredients as possible into the recipe,
+    but only if they make culinary sense together. Do not force ingredients that would
+    ruin the dish. If an ingredient clearly does not belong (e.g. banana in a savory
+    pasta), leave it out silently, do not mention it or apologize for not using it.
+    6. You may always assume water is available for boiling, cooking, or washing, even if not listed
 
-Create a recipe for {serving_size} servings within {cooking_time}.
+    Create a recipe for {serving_size} servings within {cooking_time}.
 
-Format in clean markdown:
+    Format in clean markdown:
 
-### 🍽️ [Creative, specific dish name based on the main ingredients]
+    ### 🍽️ [Creative, specific dish name based on the main ingredients]
 
-**⏱️ Cook time:** X minutes
+    **⏱️ Cook time:** X minutes
 
----
+    ---
 
-#### 🛒 Ingredients (serves {serving_size})
-- only list ingredients from the user's available list
+    #### 🛒 Ingredients (serves {serving_size})
+    - only list ingredients from the user's available list
 
----
+    ---
 
-#### 📖 Instructions
-1. Step one
-2. Step two
+    #### 📖 Instructions
+    1. Step one
+    2. Step two
 
----
+    ---
 
-💡 **Tip:** [one practical tip]"""
+    💡 **Tip:** [one practical tip]
+    """
 
-# STAGE 1: Retrieve recipes and detect missing ingredients 
+# Retrieve recipes and detect missing ingredients 
 # On first run the recipe summary is not in the session state - retrieve the recipes 
 if "recipe_summary" not in st.session_state:
     with st.spinner("Searching recipes..."):
@@ -328,11 +342,12 @@ if "recipe_summary" not in st.session_state:
             f"{prompt_text} that can be made with "
             f"{', '.join(ingredients_list)} and takes {cooking_time}."
         )
+        # Send the query to FastAPI backend
         backend_url = st.secrets.get("BACKEND_URL", "http://127.0.0.1:8000")
         try:
             response = requests.get(
                 f"{backend_url}/search",
-                params={"query": query, "n": 5},
+                params={"query": query, "n": 10},
                 timeout=10,
             )
             response.raise_for_status()
@@ -366,15 +381,9 @@ if "recipe_summary" not in st.session_state:
         )
         st.session_state["missing_ingredients"] = missing
 
-#  STAGE 2: If missing ingredients found, pause and ask user
+#  If missing ingredients found, pause and ask user
 if st.session_state.get("missing_ingredients") and "recipe_generated" not in st.session_state:
     missing = st.session_state["missing_ingredients"]
-
-    # st.info(
-    #     f"🔍 The best matching recipes also use: **{', '.join(missing)}**\n\n"
-    #     f"Select any you actually have to get a better recipe, then click **Regenerate**. "
-    #     f"Or skip to generate with just your original ingredients."
-    # )
 
     st.info(
         "🔍 The best matching recipes use some ingredients you may have. "
@@ -385,7 +394,7 @@ if st.session_state.get("missing_ingredients") and "recipe_generated" not in st.
         "✅ Which of these do you actually have?",
         options=missing,
         key="missing_multiselect",
-        help="Select multiple — all selected items will be added to your ingredient list"
+        help="Select multiple. All selected items will be added to your ingredient list"
     )
 
     col1, col2 = st.columns(2)
@@ -397,7 +406,7 @@ if st.session_state.get("missing_ingredients") and "recipe_generated" not in st.
         )
     with col2:
         skip_clicked = st.button(
-            "➡️ Skip — use my original ingredients only",
+            "➡️ Skip & use my original ingredients only",
             use_container_width=True,
         )
 
@@ -406,7 +415,7 @@ if st.session_state.get("missing_ingredients") and "recipe_generated" not in st.
             if ing not in st.session_state["ingredients_list"]:
                 st.session_state["ingredients_list"].append(ing)
         # Clear only the recipe so retrieval isn't re-run, but generation is
-        st.session_state.pop("recipe_generated", None)
+        st.session_state.pop("recipe_generated", None) # clear since we dont want to enter this if and will anyways be generating the recipe again with the added ignredients in consideration
         st.session_state.pop("chat_store", None)
         st.session_state.pop("chat_history", None)
         st.session_state["missing_ingredients"] = []  # clear so we don't show missing ingredients again
@@ -415,13 +424,13 @@ if st.session_state.get("missing_ingredients") and "recipe_generated" not in st.
     if not skip_clicked:
         st.stop()  # Hold here until user clicks one of the two buttons
 
-# STAGE 3: Generate recipe
+# Generate recipe
 if "recipe_generated" not in st.session_state:
     with st.chat_message("assistant"):
         with st.spinner("Cooking up your recipe..."):
             response_text = st.write_stream(stream_text(build_llm_prompt()))
     st.session_state.recipe_generated = response_text
-else:
+else: # If no new ongredients were added the original recipe_generated would still be present , so just display that
     with st.chat_message("assistant"):
         st.markdown(st.session_state.recipe_generated)
 
@@ -436,7 +445,7 @@ baking tray, whisk — these are basic utensils everyone has.
 Reply with a comma-separated list only. If none, reply "none".
 Recipe: {st.session_state.recipe_generated}
 """
-    appliance_result = llm_sync.invoke(appliance_check_prompt)
+    appliance_result = llm_classify.invoke(appliance_check_prompt)
     raw = appliance_result.content.strip().lower()
     if raw != "none" and raw:
         st.session_state["appliances_used"] = [a.strip() for a in raw.split(",") if a.strip()]
@@ -448,11 +457,8 @@ if st.session_state.get("appliances_used"):
     appliances = ", ".join(st.session_state["appliances_used"])
     st.info(f"💡 This recipe uses: {appliances}. Don't have one? Ask in the follow-up chat to adapt the recipe.")
 
-# st.divider()
-
-# ── Human-in-the-loop feedback ────────────────────────────────────────────────
-# Collects real user signals — used as online quality metrics
-# Complements RAGAS (retrieval quality) and LLM-as-judge (generation quality)
+# Human-in-the-loop feedback 
+# Here we collects real user signals, that will be later used as online quality metrics
 if "feedback_given" not in st.session_state:
     col_q, col1, col2 = st.columns([3, 1, 1])
     with col_q:
@@ -486,9 +492,7 @@ else:
         st.success("Thanks for the feedback! Glad you liked it 🎉")
     else:
         st.info("Thanks for the feedback! Try refining it in the chat below.")
-
-# st.divider()
-
+        
 # Follow-up Q&A
 st.markdown("#### 💬 Customize your recipe")
 st.caption("Try: 'make it spicier', 'I also have eggs', 'make it vegan', 'reduce to 1 serving'")

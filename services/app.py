@@ -1,32 +1,19 @@
-"""
-app.py - SnapChef Backend API (FastAPI + Pinecone)
-===================================================
-Updated to use Pinecone instead of ChromaDB for vector search.
+# app.py - SnapChef Backend API (FastAPI + Pinecone)
 
-Benefits over ChromaDB:
-  - No local index file (image drops from 4.8GB to ~500MB)
-  - No OOM issues (vectors live in Pinecone cloud)
-  - Cold start drops from 3 minutes to 15 seconds
-  - Scales automatically
-
-Hybrid search still works:
-  - Dense: Pinecone vector search (replaces ChromaDB)
-  - Sparse: BM25 on recipes.csv (unchanged)
-  - RRF merge (unchanged)
-"""
-
-from fastapi import FastAPI, Query, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+# Import libraries
 import os
 import pandas as pd
+from typing import Optional
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
 
-# ── Pydantic response model ───────────────────────────────────────────────────
+
+# Pydantic response model - define the recipe class
 class RecipeResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
     id:               Optional[int]   = None
@@ -36,45 +23,51 @@ class RecipeResponse(BaseModel):
     steps:            Optional[str]   = None
     servings:         Optional[float] = None
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Configurations
 CSV_PATH         = "services/ChromaDB/recipes.csv"   # still needed for BM25
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", "")
 INDEX_NAME       = "snapchef-recipes"
 
-# ── Global resources ──────────────────────────────────────────────────────────
+# Define Global variable 
 RECIPES_DF    = None
 BM25_DF       = None
 BM25_INDEX    = None
 model         = None
 pinecone_index = None
 
+# Lifespan content manager
+# The lifespan replaces Flask's module-level loading. 
+# Everything expensive (loading models, connecting to databases) 
+# runs once when the server starts, not on every request.
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Define all global variables
+    # global declarations are necessary because Python functions create their own scope
     global RECIPES_DF, BM25_DF, BM25_INDEX, model, pinecone_index
-
-    print("Loading SnapChef backend resources...", flush=True)
-
     try:
+        # Load the recipe CSV
         RECIPES_DF = pd.read_csv(CSV_PATH)
-        print(f"  ✓ Loaded {len(RECIPES_DF)} recipes from CSV", flush=True)
+        print(f"Loaded {len(RECIPES_DF)} recipes from CSV", flush=True)
     except Exception as e:
-        print(f"  ✗ CSV load failed: {e}", flush=True)
+        print(f"CSV load failed: {e}", flush=True)
         raise
 
+    # Connect to Pinecone
     try:
         pc = Pinecone(api_key=PINECONE_API_KEY)
         pinecone_index = pc.Index(INDEX_NAME)
         stats = pinecone_index.describe_index_stats()
-        print(f"  ✓ Connected to Pinecone — {stats.total_vector_count} vectors indexed", flush=True)
+        print(f"Connected to Pinecone — {stats.total_vector_count} vectors indexed", flush=True)
     except Exception as e:
-        print(f"  ✗ Pinecone connection failed: {e}", flush=True)
+        print(f"Pinecone connection failed: {e}", flush=True)
         raise
-
+    
+    # Load the embedding model
     try:
         model = SentenceTransformer("all-MiniLM-L6-v2")
-        print("  ✓ Embedding model loaded (all-MiniLM-L6-v2)", flush=True)
+        print("Embedding model loaded (all-MiniLM-L6-v2)", flush=True)
     except Exception as e:
-        print(f"  ✗ Model load failed: {e}", flush=True)
+        print(f"Model load failed: {e}", flush=True)
         raise
 
     try:
@@ -84,26 +77,24 @@ async def lifespan(app: FastAPI):
             ingredients = str(row.get("ingredients_raw", ""))
             return f"{name} {description} {ingredients}".lower().split()
 
-        # RECIPE_CORPUS = [build_recipe_text(row) for _, row in RECIPES_DF.iterrows()]
-        # BM25_INDEX    = BM25Okapi(RECIPE_CORPUS)
-        # print("  ✓ BM25 index built", flush=True)
-
-        # Sample 50k recipes for BM25 — builds in ~30s vs 5min for 500k
+        # Sample 50k recipes for BM25
         # Pinecone handles full 500k for dense search, BM25 is keyword fallback
         BM25_DF       = RECIPES_DF.sample(n=50000, random_state=42) if len(RECIPES_DF) > 50000 else RECIPES_DF
         RECIPE_CORPUS = [build_recipe_text(row) for _, row in BM25_DF.iterrows()]
         BM25_INDEX    = BM25Okapi(RECIPE_CORPUS)
-        print(f"  ✓ BM25 index built ({len(BM25_DF)} recipes)", flush=True)
-
+        print(f"BM25 index built ({len(BM25_DF)} recipes)", flush=True)
     except Exception as e:
-        print(f"  ✗ BM25 build failed: {e}", flush=True)
+        print(f"BM25 build failed: {e}", flush=True)
         raise
 
     print("Backend ready.\n", flush=True)
+    # This is where the server actually runs 
+    # Everything before yield is startup
+    # Everything after is shutdown
     yield
     print("Shutting down SnapChef backend...", flush=True)
 
-# ── FastAPI app ───────────────────────────────────────────────────────────────
+# FastAPI app
 app = FastAPI(
     title="SnapChef Recipe Search API",
     description="Hybrid search (BM25 + Pinecone dense retrieval) for recipe recommendations",
@@ -118,7 +109,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Health check ──────────────────────────────────────────────────────────────
+# Health check 
 @app.get("/health")
 async def health():
     stats = pinecone_index.describe_index_stats() if pinecone_index else {}
@@ -129,7 +120,7 @@ async def health():
         "vector_store":  "pinecone",
     }
 
-# ── Hybrid search ─────────────────────────────────────────────────────────────
+# Hybrid search
 def hybrid_search(query_text: str, n_results: int = 10) -> list[dict]:
     """
     Hybrid search combining Pinecone dense retrieval and BM25 keyword search.

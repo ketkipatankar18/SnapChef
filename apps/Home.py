@@ -1,7 +1,6 @@
 # Home.py 
 
 # Import libraries
-# import os
 import base64
 import json
 import streamlit as st
@@ -10,12 +9,13 @@ from streamlit_cookies_manager import EncryptedCookieManager
 
 
 # The first thing to run at every page load
-# Read the browser cookie names snapchef_token
+# Read the browser cookie named snapchef_token
 cookies = EncryptedCookieManager(
     prefix="snapchef_",
     password= st.secrets["PASSWORD"]
 )
 
+# Remove padding at the top of the main content, so banner starts at level with sidebar buttons
 st.markdown("""
     <style>
         .block-container {
@@ -23,20 +23,34 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
 # If the cookie manager is not ready yet/ it is asynchronous, then we will halt the whole page
 # Streamlit will retry on the next rerun. This part runs before any UI renders.
 if not cookies.ready(): 
     st.stop()
 
+# To improve the font size of context text 
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 1rem !important;
+        }
+        .stMarkdown p, .stMarkdown li, .stCaption, label, .stSelectbox, .stTextInput {
+            font-size: 1.05rem !important;
+        }
+        section[data-testid="stSidebar"] {
+            font-size: 1.05rem !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+
 def get_image_base64(image_path):
     with open(image_path, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
-# st.title("🍳 SnapChef: Recipe Suggestion RAG")
-# st.title("🍳 SnapChef")
-
+# Display the banner image with application title followed by a description
 img_base64 = get_image_base64("Assets/banner_image.webp")
-
 st.markdown(f"""
     <div style="
         position: relative;
@@ -117,8 +131,14 @@ if 'token' not in st.session_state:
         # result = oauth2.authorize_button("Log in using Google","http://localhost:8501", "openid email profile")
 
         redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501")
-        result = oauth2.authorize_button("Log in using Google", redirect_uri, "openid email profile")
-
+        # result = oauth2.authorize_button("Log in using Google", redirect_uri, "openid email profile")
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            result = oauth2.authorize_button(
+                "Log in using Google", redirect_uri, "openid email profile"
+            )
+            
         # If and when login is successful, result["token"] is and OAuth2Token object
         if result and 'token' in result:
             # If authorization successful, save token in session state
@@ -136,13 +156,7 @@ token = st.session_state.get("token")
 if not token:
     st.stop()   # don't render the form until logged in
 
-# try:
-#     user_info = jwt.decode(token["id_token"], options={"verify_signature": False})
-#     user_name = user_info.get("name", user_info.get("email", "User"))
-#     st.caption(f"👤 Logged in as {user_name}")
-# except Exception:
-#     pass
-
+# To render user logged in - obtain user name from JWT payload
 try:
     id_token = token.get("id_token", "") if isinstance(token, dict) else ""
     if id_token:
@@ -190,14 +204,14 @@ st.text_input(
     on_change=add_ingredient
 )
 
-# Checkbox pattern — avoids Streamlit double-click bug on individual delete buttons
+# Checkbox to add list of ingredients one by one
 if st.session_state["ingredients_list"]:
     st.caption("Check ingredients to remove, then click Remove selected")
     checked = []
     for i, ing in enumerate(st.session_state["ingredients_list"]):
         if st.checkbox(ing, key=f"chk_{i}"):
             checked.append(i)
-    
+
     st.success(
         f"✅ {len(st.session_state['ingredients_list'])} ingredient(s): "
         f"{', '.join(st.session_state['ingredients_list'])}"
@@ -239,15 +253,9 @@ if st.session_state["ingredients_list"] and st.button("🍳 Generate Recipe", us
 
 # Logout in sidebar
 with st.sidebar:
-    st.markdown(
-        """
-        <div style="position: fixed; bottom: 2rem; width: 14rem;">
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("<br>" * 20, unsafe_allow_html=True)
     if st.button("Log out", type="secondary", use_container_width=True):
         del st.session_state["token"]
         cookies["token"] = ""
         cookies.save()
         st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)

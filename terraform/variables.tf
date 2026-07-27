@@ -1,5 +1,4 @@
 # variables.tf - Input variables for SnapChef Terraform config
-# =============================================================
 # Values are set in terraform.tfvars (gitignored)
 # Defaults are safe values that work for most cases
 

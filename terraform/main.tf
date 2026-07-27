@@ -1,5 +1,4 @@
 # main.tf - SnapChef Azure Infrastructure
-# =========================================
 # Provisions:
 #   - Resource Group          : logical container for all resources
 #   - Azure Container Registry: stores our Docker images
@@ -23,7 +22,7 @@ provider "azurerm" {
   subscription_id = var.subscription_id
 }
 
-# ── Resource Group ────────────────────────────────────────────────────────────
+# Resource Group - logical container for all Azure resources
 # Logical container — deleting this deletes everything inside it
 resource "azurerm_resource_group" "snapchef" {
   name     = var.resource_group_name
@@ -36,7 +35,7 @@ resource "azurerm_resource_group" "snapchef" {
   }
 }
 
-# ── Azure Container Registry (ACR) ───────────────────────────────────────────
+# Azure Container Registry (ACR) 
 # Stores our Docker images — like DockerHub but private on Azure
 # FastAPI backend image gets pushed here before deployment
 resource "azurerm_container_registry" "snapchef" {
@@ -51,7 +50,7 @@ resource "azurerm_container_registry" "snapchef" {
   }
 }
 
-# ── Log Analytics Workspace ───────────────────────────────────────────────────
+# Log Analytics Workspace
 # Collects logs from Container Apps
 # Used by Azure Monitor to store and query logs
 resource "azurerm_log_analytics_workspace" "snapchef" {
@@ -66,7 +65,7 @@ resource "azurerm_log_analytics_workspace" "snapchef" {
   }
 }
 
-# ── Container Apps Environment ────────────────────────────────────────────────
+# Container Apps Environment 
 # Runtime environment that Container Apps run inside
 # All apps in one environment share networking
 resource "azurerm_container_app_environment" "snapchef" {
@@ -80,7 +79,7 @@ resource "azurerm_container_app_environment" "snapchef" {
   }
 }
 
-# ── Container App — FastAPI Backend ──────────────────────────────────────────
+# Container App — FastAPI Backend 
 # Running instance of our FastAPI app
 # Pulls image from ACR, exposes port 8000, scales to 0 when idle
 resource "azurerm_container_app" "snapchef_api" {

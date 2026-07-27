@@ -1,7 +1,6 @@
-"""
-run_eval_ragas_synthetic.py - RAGAS Evaluation
-"""
+# run_eval_ragas_synthetic.py - RAGAS Evaluation
 
+# Import libraries
 import os
 import json
 import tomllib
@@ -9,17 +8,15 @@ import requests
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
-
-# from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import SentenceTransformerEmbeddings
-
 from ragas import evaluate # main scoring function, pass it a dataset and list of metrics
 from ragas.metrics import faithfulness, answer_relevancy, context_recall, context_precision # 4 metric objects RAGAS uses internally
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from datasets import Dataset # Hugging Face datasets
 
+# Configuration - load all the required information from the secrets toml
 secrets_path = Path(".streamlit/secrets.toml")
 with open(secrets_path, "rb") as f:
     secrets = tomllib.load(f)
@@ -27,34 +24,14 @@ with open(secrets_path, "rb") as f:
 OPEN_AI_API_KEY = secrets.get("OPEN_AI_API_KEY", "") 
 BACKEND_URL    = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000")
 TESTSET_PATH   = Path("eval_results/synthetic_testset.csv")
-# TESTSET_PATH = Path("eval_results/synthetic_testset_filtered.csv")
 OUTPUT_DIR     = Path("eval_results")
 
-# critic_llm scores: "Is this question good enough to keep in the test set?"
-# runs ONCE when building the test set
-
-# eval_ragas_synthetic.py
-# llm scores: "Is this pipeline answer faithful / relevant / recalled correctly?"
-# runs ONCE per test case during evaluation
 
 llm = LangchainLLMWrapper(ChatOpenAI(
     model="gpt-4o-mini",
     openai_api_key=OPEN_AI_API_KEY,
     temperature=0,
 ))
-
-# embeddings = LangchainEmbeddingsWrapper(OpenAIEmbeddings(
-#     model="text-embedding-3-small",
-#     openai_api_key=OPENAI_API_KEY,
-# ))
-
-# RAGAS uses llm to judge whether an answer is faithful to the context.
-# Here the embeddings are only used by RAGAS to compare "does this answer semantically match the question?"
-# sentence_transformer = HuggingFaceEmbeddings(
-#     model_name="all-MiniLM-L6-v2",
-#     model_kwargs={"device": "cpu"},
-#     encode_kwargs={"normalize_embeddings": True})
-# embeddings = LangchainEmbeddingsWrapper(sentence_transformer)
 
 sentence_transformer = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 embeddings = LangchainEmbeddingsWrapper(sentence_transformer)
@@ -65,13 +42,13 @@ def safe_avg(scores):
 
 def retrieve_and_format(query: str, n: int = 5) -> list[str]:
     try:
-        # production Flask backend, the same GET /search endpoint the Streamlit app calls.
+        # production FastAPI backend, the same GET /search endpoint the Streamlit app calls.
         # Here query is the question in the testset, they are specific to clusters with similar recipes so the recipes selected should mainly contain relevant ones.
         resp = requests.get(f"{BACKEND_URL}/search", params={"query": query, "n": n}, timeout=15)
         resp.raise_for_status()
         recipes = resp.json()
     except Exception as e:
-        print(f"  ⚠️  Backend error: {e}")
+        print(f" Backend error: {e}")
         return []
 
     # Convert each recipe dict into a plain string
@@ -185,9 +162,7 @@ def run_synthetic_eval():
     with open(OUTPUT_DIR / "synthetic_ragas_summary.json", "w") as f:
         json.dump(summary, f, indent=2)
 
-    print("\n" + "=" * 60)
     print("SYNTHETIC EVAL RESULTS")
-    print("=" * 60)
     for k, v in summary.items():
         if isinstance(v, float):
             print(f"  {k:<22}: {v:.4f}")
