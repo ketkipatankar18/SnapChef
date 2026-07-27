@@ -7,6 +7,8 @@ import streamlit as st
 from streamlit_oauth import OAuth2Component
 from streamlit_cookies_manager import EncryptedCookieManager
 
+from streamlit_oauth import StreamlitOauthError
+
 
 # The first thing to run at every page load
 # Read the browser cookie named snapchef_token
@@ -145,12 +147,23 @@ if 'token' not in st.session_state:
 
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            result = oauth2.authorize_button(
-                "Log in using Google",
-                redirect_uri,
-                "openid email profile",
-                key="google_oauth_button"
-            )
+            try:
+                result = oauth2.authorize_button(
+                    "Log in using Google",
+                    redirect_uri,
+                    "openid email profile",
+                    key="google_oauth_button"
+                )
+            except StreamlitOauthError:
+                # The OAuth component's internal state got out of sync with Google's
+                # redirect — this happens due to a known timing issue between
+                # Streamlit reruns and the OAuth popup callback. Clearing the
+                # component's cached state and rerunning gives the user a fresh
+                # login button automatically instead of a crash.
+                for key in list(st.session_state.keys()):
+                    if key.startswith("google_oauth_button"):
+                        del st.session_state[key]
+                st.rerun()
         
         # If and when login is successful, result["token"] is and OAuth2Token object
         if result and 'token' in result:
