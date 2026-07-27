@@ -292,18 +292,22 @@ def detect_missing_ingredients(recipe_summary: str, user_ingredients: list) -> l
         for variant in variants
     }
 
+    # Build a set of what the user already has, normalized to lowercase,
+    # so we never suggest something they've already listed
+    user_has = {ing.strip().lower() for ing in user_ingredients}
+
     seen = set()
     result = []
     for i in raw.split(","):
         cleaned = i.strip().lower()
-        if not cleaned or cleaned in seen:
+        if not cleaned or cleaned in seen or cleaned in user_has:
             continue
         seen.add(cleaned)
         result.append(i.strip())
 
         # Guarantee the generic form is present, regardless of LLM compliance
         generic = variant_to_generic.get(cleaned)
-        if generic and generic not in seen:
+        if generic and generic not in seen and generic not in user_has:
             seen.add(generic)
             result.append(generic)
 
