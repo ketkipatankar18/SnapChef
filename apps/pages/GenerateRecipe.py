@@ -579,7 +579,7 @@ for q, a in st.session_state["chat_history"]:
 
 # Human-in-the-loop feedback
 # Only appears after a follow-up has actually changed the recipe
-if st.session_state.get("chat_history") and "followup_feedback_given" not in st.session_state:
+if st.session_state.get("last_followup_was_update") and "followup_feedback_given" not in st.session_state:
     col_q, col1, col2 = st.columns([3, 1, 1])
     with col_q:
         st.markdown("""
@@ -627,13 +627,14 @@ if st.session_state.get("pending_confirmation"):
             with st.chat_message("assistant"):
                 confirm_response = st.write_stream(stream_text(confirm_prompt))
             st.session_state["chat_history"].append(("Yes, please update it.", confirm_response))
-            # st.session_state.pop("feedback_given", None)
             st.session_state.pop("followup_feedback_given", None)
+            st.session_state["last_followup_was_update"] = True
             st.rerun()
     with col_no:
         if st.button("❌ No, keep it as is", use_container_width=True, key="confirm_no"):
             st.session_state["pending_confirmation"] = False
             st.session_state["chat_history"].append(("No, keep it as is.", "No problem, keeping the recipe as is!"))
+            st.session_state["last_followup_was_update"] = False
             st.rerun()
 
 user_followup = st.chat_input("Ask a follow-up to refine your recipe...")
@@ -657,13 +658,14 @@ if user_followup:
             with st.chat_message("assistant"):
                 confirm_response = st.write_stream(stream_text(confirm_prompt))
             st.session_state["chat_history"].append((user_followup, confirm_response))
-            # st.session_state.pop("feedback_given", None)
             st.session_state.pop("followup_feedback_given", None)
+            st.session_state["last_followup_was_update"] = True
             st.rerun()
             handled_as_confirmation = True
         elif normalized in ("no", "n", "nope", "keep it", "keep as is", "no thanks"):
             st.session_state["pending_confirmation"] = False
             st.session_state["chat_history"].append((user_followup, "No problem, keeping the recipe as is!"))
+            st.session_state["last_followup_was_update"] = False
             st.rerun()
             handled_as_confirmation = True
         else:
@@ -685,6 +687,7 @@ if user_followup:
             with st.chat_message("assistant"):
                 st.markdown(off_topic_response)
             st.session_state["chat_history"].append((user_followup, off_topic_response))
+            st.session_state["last_followup_was_update"] = False
 
         elif classification.get("intent") == "question":
             question_prompt = (
@@ -701,6 +704,7 @@ if user_followup:
                 question_response = st.write_stream(stream_text(question_prompt))
             st.session_state["chat_history"].append((user_followup, question_response))
             st.session_state["pending_confirmation"] = True
+            st.session_state["last_followup_was_update"] = False
 
         else:
             if classification.get("intent") == "add_ingredient":
@@ -737,6 +741,9 @@ if user_followup:
                 followup_response = st.write_stream(stream_text(followup_prompt))
 
             st.session_state["chat_history"].append((user_followup, followup_response))
+
+            # Reset follow-up feedback only when the recipe actually changed
             st.session_state.pop("followup_feedback_given", None)
-        # st.session_state.pop("feedback_given", None)
+            st.session_state["last_followup_was_update"] = True
+
         st.rerun()
