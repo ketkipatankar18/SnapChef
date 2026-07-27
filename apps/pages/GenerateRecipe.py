@@ -218,18 +218,23 @@ Reply in this exact format (JSON only, no other text):
 
 def detect_missing_ingredients(recipe_summary: str, user_ingredients: list) -> list:
     detection_prompt = f"""Here are some recipe descriptions:
-{recipe_summary}
+    {recipe_summary}
 
-The user only has these ingredients: {', '.join(user_ingredients)}
+    The user only has these ingredients: {', '.join(user_ingredients)}
 
-List the ingredients mentioned in the recipes that the user does NOT have.
-Rules:
-- Return ingredient names only — no quantities, no units, no numbers
-- No verbs, no preparation instructions (e.g. "minced", "chopped", "boiled")
-- Just the plain ingredient name e.g. "garlic" not "2 cloves garlic, minced"
-- Reply with a simple comma-separated list only
-- If none are missing, reply with "none"
-- Do not include pantry assumptions, only list things explicitly in the recipes above"""
+    List the ingredients mentioned in the recipes that the user does NOT have.
+    Rules:
+    - Return ingredient names only — no quantities, no units, no numbers
+    - No verbs, no preparation instructions (e.g. "minced", "chopped", "boiled")
+    - Just the plain ingredient name e.g. "garlic" not "2 cloves garlic, minced"
+    - Generalize specific ingredient variants to their common form — e.g. "olive oil", 
+    "vegetable oil", or "canola oil" should all be suggested simply as "oil". 
+    Similarly "kosher salt" or "sea salt" should just be "salt". Only keep a 
+    specific variant if it's genuinely distinct (e.g. "coconut milk" vs "milk" 
+    are different ingredients, not variants of the same thing)
+    - Reply with a simple comma-separated list only
+    - If none are missing, reply with "none"
+    - Do not include pantry assumptions, only list things explicitly in the recipes above"""
 
     # return a comma seperated string as output
     result = llm_classify.invoke(detection_prompt)
@@ -290,9 +295,15 @@ def build_llm_prompt():
     1. ONLY use these ingredients: {', '.join(st.session_state["ingredients_list"])}
     2. Do NOT add any other ingredients, not even pantry staples like salt or oil
     3. If a cooking step requires an ingredient not in the user's list, either:
-    - Skip that step entirely if the dish still makes sense without it
-    - Substitute with the closest available ingredient from the user's list
-    - If neither is possible, acknowledge the limitation honestly and simplify the dish
+   - Skip that step entirely if the dish still makes sense without it
+   - Substitute with the closest available ingredient from the user's list
+   - If neither is possible, acknowledge the limitation honestly and simplify the dish
+    3b. If a step normally requires oil or fat (e.g. sautéing, frying) but the user has 
+        none listed, do NOT silently omit it. Instead adapt the technique explicitly:
+        use a splash of water or broth to prevent sticking, mention using a non-stick 
+        pan on low heat, or explicitly say "dry-sauté" so the instructions are physically 
+        accurate and won't burn or stick. Never write a sauté/fry step as if fat were 
+        present when it wasn't listed.
     4. If the available ingredients are too limited to make any real dish (e.g. only salt 
     and water, or only one or two basic condiments with nothing to cook), do NOT invent 
     a fake recipe. Instead, respond with warmth and light humour — something like 

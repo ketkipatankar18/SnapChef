@@ -2,7 +2,9 @@
 
 # Import libraries
 import os
+import tomllib
 import pandas as pd
+from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, HTTPException
@@ -23,9 +25,22 @@ class RecipeResponse(BaseModel):
     steps:            Optional[str]   = None
     servings:         Optional[float] = None
 
+def load_pinecone_key():
+    # First check environment variable (used in Azure/Docker)
+    key = os.environ.get("PINECONE_API_KEY", "")
+    if key:
+        return key
+    # Fallback to local secrets.toml (used in local dev)
+    secrets_path = Path(".streamlit/secrets.toml")
+    if secrets_path.exists():
+        with open(secrets_path, "rb") as f:
+            secrets = tomllib.load(f)
+        return secrets.get("PINECONE_API_KEY", "")
+    return ""
+
 # Configurations
 CSV_PATH         = "services/ChromaDB/recipes.csv"   # still needed for BM25
-PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", "")
+PINECONE_API_KEY = load_pinecone_key()
 INDEX_NAME       = "snapchef-recipes"
 
 # Define Global variable 
@@ -128,8 +143,8 @@ def hybrid_search(query_text: str, n_results: int = 10) -> list[dict]:
     """
     CANDIDATE_POOL = n_results * 4
 
-    # ── Dense retrieval via Pinecone ──────────────────────────────────────────
-    # Same concept as ChromaDB query — encode query, find nearest vectors
+    # Dense retrieval via Pinecone
+    # Same concept as ChromaDB query, encode query, find nearest vectors
     # Difference: vectors live in Pinecone cloud, not local disk
     query_embedding = model.encode([query_text])[0].tolist()
     pinecone_results = pinecone_index.query(
@@ -139,7 +154,7 @@ def hybrid_search(query_text: str, n_results: int = 10) -> list[dict]:
     )
     dense_ids = [int(match.id) for match in pinecone_results.matches]
 
-    # ── BM25 keyword retrieval ────────────────────────────────────────────────
+    # BM25 keyword retrieval
     # Unchanged from ChromaDB version
     tokenized_query  = query_text.lower().split()
     bm25_scores      = BM25_INDEX.get_scores(tokenized_query)
@@ -147,7 +162,7 @@ def hybrid_search(query_text: str, n_results: int = 10) -> list[dict]:
     # bm25_ids         = [int(RECIPES_DF.iloc[i]["id"]) for i in bm25_top_indices]
     bm25_ids = [int(BM25_DF.iloc[i]["id"]) for i in bm25_top_indices]
     
-    # ── Reciprocal Rank Fusion ────────────────────────────────────────────────
+    # Reciprocal Rank Fusion
     # Unchanged
     k = 60
     rrf_scores: dict[int, float] = {}
@@ -162,7 +177,7 @@ def hybrid_search(query_text: str, n_results: int = 10) -> list[dict]:
     matched_df = RECIPES_DF[RECIPES_DF["id"].isin(top_ids)]
     return matched_df.to_dict(orient="records")
 
-# ── Search endpoint ───────────────────────────────────────────────────────────
+# Search endpoint
 @app.get(
     "/search",
     response_model=list[RecipeResponse],
@@ -178,7 +193,7 @@ async def search(
     recipes = hybrid_search(query_text=query, n_results=n)
     return recipes
 
-# ── Run directly ──────────────────────────────────────────────────────────────
+# Main
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
