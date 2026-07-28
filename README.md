@@ -15,6 +15,16 @@ Ever opened your fridge and had no idea what to cook? SnapChef solves that. Tell
 
 ---
 
+## First Customer: Me
+
+Naturally, I became my own first customer. Fed it a lone zucchini and some questionable garlic, fully expecting a disaster.
+
+![First recipe made with SnapChef](/Assets/delicious_zucchini.jpeg)
+
+*What came out instead was genuinely good.*
+
+---
+
 ## Live Application
 
 | Component | URL |
