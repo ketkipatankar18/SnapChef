@@ -9,7 +9,7 @@ Ever opened your fridge and had no idea what to cook? SnapChef solves that. Tell
 
 ## Demo
 
-![SnapChef Demo](/Assets/demo_snapchef.mp4)
+![SnapChef Demo](/Assets/demo_snapchef.gif)
 
 *Live demo of SnapChef generating a recipe from available ingredients with follow-up customisation.*
 
