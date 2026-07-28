@@ -1,6 +1,6 @@
 # 🍳 SnapChef — AI-Powered Recipe Generation from Your Ingredients
 
-[![See It In Action](https://img.shields.io/badge/Live%20Demo-snapchef--app.streamlit.app-orange)](https://snapchef-app.streamlit.app)
+[![See It In Action](https://img.shields.io/badge/See%20It%20In%20Action-snapchef--app.streamlit.app-orange)](https://snapchef-app.streamlit.app)
 [![API Health](https://img.shields.io/badge/API-Azure%20Container%20Apps-blue)](https://snapchef-api.politesea-1ef3c6e3.eastus.azurecontainerapps.io/health)
 
 Ever opened your fridge and had no idea what to cook? SnapChef solves that. Tell it what ingredients you have and it generates a custom recipe using only what's in your kitchen, no grocery runs needed.
@@ -9,7 +9,7 @@ Ever opened your fridge and had no idea what to cook? SnapChef solves that. Tell
 
 ## Demo
 
-![SnapChef Demo](/Assets/Demo2x.gif)
+![SnapChef Demo](/Assets/demo_snapchef.mp4)
 
 *Live demo of SnapChef generating a recipe from available ingredients with follow-up customisation.*
 
@@ -58,6 +58,8 @@ BM25 Index (in-memory)   Pinecone Vector DB (500,471 vectors)
 - **Multi-turn follow-up chat** — refine recipes with natural language ("make it spicier", "make it vegan")
 - **Intent classification guardrail** — off-topic messages redirected before hitting GPT-4o
 - **Appliance detection** — flags kitchen appliances the recipe requires
+- **Quantity tracking** — optional per-ingredient quantity stepper for more precise recipes
+- **Conversational confirmation flow** — asks before making uncertain changes, so the recipe only updates when you say yes
 - **Human-in-the-loop feedback** — thumbs up/down logged for quality analysis
 - **Cross-encoder reranking** — available locally (disabled in cloud for memory optimisation)
 
@@ -181,7 +183,15 @@ Every follow-up message is first classified by GPT-4o-mini (add_ingredient / sub
 
 Measures whether the retrieval pipeline finds recipes that actually contain the information needed to answer the user's query. Four metrics: faithfulness, answer relevancy, context recall, context precision.
 
-Test set generated synthetically using RAGAS `TestsetGenerator` with 7 domain-specific personas (limited ingredients, time constraints, dietary restrictions, serving size variations) from 400 sampled recipes.
+Test set generated synthetically using RAGAS `TestsetGenerator` with 7 domain-specific personas, from 400 sampled recipes:
+
+- Home cook with limited ingredients
+- Busy person with time constraints
+- Cook with dietary preferences
+- Beginner cook
+- Cook planning for a specific number of servings
+- Spontaneous cook using leftover ingredients
+- Cook with limited quantities of ingredients
 
 ### LLM-as-Judge (Generation Quality)
 
