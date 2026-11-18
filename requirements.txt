@@ -11,6 +11,7 @@ rank-bm25
 streamlit
 streamlit-oauth
 streamlit-cookies-manager
+pyarrow==18.1.0
 requests==2.34.2
 
 # LangChain stack 

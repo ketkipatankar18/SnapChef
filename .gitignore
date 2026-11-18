@@ -26,3 +26,6 @@ __pycache__/
 
 # Mac
 .DS_Store
+# Virtual environments
+.venv-app/
+.venv-test/

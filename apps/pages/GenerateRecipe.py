@@ -7,6 +7,12 @@ import csv
 import os
 from datetime import datetime
 import streamlit as st
+
+# streamlit-cookies-manager 0.2.0 still calls @st.cache, which newer Streamlit removed
+if not hasattr(st, "cache"):
+    st.cache = st.cache_resource # new streamlit version st.cache equivalent
+
+
 import requests
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables.history import RunnableWithMessageHistory

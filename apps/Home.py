@@ -4,6 +4,11 @@
 import base64
 import json
 import streamlit as st
+
+# streamlit-cookies-manager 0.2.0 still calls @st.cache, which newer Streamlit removed
+if not hasattr(st, "cache"):
+    st.cache = st.cache_resource # new streamlit version st.cache equivalent
+
 from streamlit_oauth import OAuth2Component
 from streamlit_cookies_manager import EncryptedCookieManager
 

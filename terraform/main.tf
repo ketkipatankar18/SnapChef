@@ -59,6 +59,7 @@ resource "azurerm_log_analytics_workspace" "snapchef" {
   location            = azurerm_resource_group.snapchef.location
   sku                 = "PerGB2018"
   retention_in_days   = 30
+  daily_quota_gb    = 0.5   
 
   tags = {
     project = "snapchef"
@@ -147,7 +148,7 @@ resource "azurerm_container_app" "snapchef_api" {
 
     # Scale to 0 when idle — no traffic = no cost
     min_replicas = 1
-    max_replicas = 3
+    max_replicas = 1
   }
 
   ingress {
